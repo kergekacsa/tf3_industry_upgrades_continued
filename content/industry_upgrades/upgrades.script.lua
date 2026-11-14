@@ -17,8 +17,8 @@
 -- consumption event counts what the rule consumes, and once everything has arrived and the minimum
 -- duration is over the levels become targets like bought ones: their rebuild builds them and drops
 -- the order's stocks.
-local core = require "kacsa_industry_upgrades::/industry_upgrades/core.lua"
-local config = require "kacsa_industry_upgrades::/industry_upgrades/config.lua"
+local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
+local config = require "stardorn_industry_upgrades::/industry_upgrades/config.lua"
 local productivity = ug_require "::/industries/industry_productivity_util.tl"
 
 local LOG_PREFIX = core.LOG_PREFIX

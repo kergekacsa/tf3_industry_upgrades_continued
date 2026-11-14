@@ -26,7 +26,7 @@
 --   making that cargo are still marked as suppliers when the industry is selected (the matching reads
 --   the stocks, cargo_util.getCargoTypesForStockList).
 -- Anything unexpected leaves the window as it is.
-local core = require "kacsa_industry_upgrades::/industry_upgrades/core.lua"
+local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
 local react = ug_require "::/gui/main/react.lua"
 local builtin = ug_require "::/gui/main/builtin.lua"
 local industryUtil = ug_require "::/gui/main/industry_util.tl"

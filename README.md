@@ -8,12 +8,10 @@ The first commit of this repository is the original, revision 8 (mod.io item 642
 
 ## Differences from the original
 
-| Area | Original | Fork |
-|---|---|---|
-| Mod ID and folder | `stardorn_industry_upgrades` | `kacsa_industry_upgrades` |
+None yet. The fork keeps the mod ID `stardorn_industry_upgrades`, and its folder in the staging area has the same name.
 
 ## Use
 
-The fork and the original wrap the same industries. Only one of them MUST be active in a game.
+The game finds the fork in the staging area. The mod.io copy of the original MUST NOT be installed at the same time, because both have the same mod ID.
 
-The saved upgrade state belongs to the game script of the mod ID. A savegame that switches from the original to the fork keeps the built levels, because they are construction parameters with the same names. It loses the points, the EXP, the bought levels that wait for their rebuild, and the open delivery orders.
+A savegame made with the original keeps its upgrade state with the fork. The game script, the mod settings, and the construction parameters all belong to the mod ID, and the ID is the same.

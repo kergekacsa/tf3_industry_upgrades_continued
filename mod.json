@@ -1,7 +1,7 @@
 {
     "dependencies": null,
     "incompatibilities": null,
-    "modId": "kacsa_industry_upgrades",
+    "modId": "stardorn_industry_upgrades",
     "revision": 8,
     "options": null,
     "visible": true,
@@ -12,7 +12,7 @@
         "fileName": ""
     },
     "runScript": {
-        "fileName": "kacsa_industry_upgrades::/mod.script@runFn"
+        "fileName": "stardorn_industry_upgrades::/mod.script@runFn"
     },
     "postRunScript": {
         "fileName": ""

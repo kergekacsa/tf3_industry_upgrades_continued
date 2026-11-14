@@ -1,6 +1,6 @@
 -- Compact "Upgrades" card inside the industry tab. Only shown when the industry window has no own
 -- "Upgrades" tab (setting "Card in the Industry tab", or another mod owns the window script).
-local ui = require "kacsa_industry_upgrades::/industry_upgrades/ui.lua"
+local ui = require "stardorn_industry_upgrades::/industry_upgrades/ui.lua"
 local react = ug_require "::/gui/main/react.lua"
 local builtin = ug_require "::/gui/main/builtin.lua"
 local engineReact = ug_require "::/gui/main/engine_react_util.tl"
