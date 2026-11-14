@@ -32,21 +32,8 @@
             "yearTo": 0
         },
         {
-            "key": "upgradeCosts",
-            "name": "Upgrade costs",
-            "tooltip": "EXP points: industries earn points by running well and spend them on levels.\nDeliveries: levels are planned and paid with cargo delivered to the industry.",
-            "uiType": "Button",
-            "values": [
-                "EXP points [E]",
-                "Deliveries [D]"
-            ],
-            "defaultIndex": 0,
-            "yearFrom": 0,
-            "yearTo": 0
-        },
-        {
             "key": "throughputStep",
-            "name": "Throughput per level",
+            "name": "Throughput: per level",
             "tooltip": "More production cycles per throughput level.",
             "uiType": "Slider",
             "values": [
@@ -64,7 +51,7 @@
         },
         {
             "key": "throughputLevels",
-            "name": "Number of throughput levels",
+            "name": "Throughput: number of levels",
             "tooltip": "How many throughput levels can be bought.",
             "uiType": "Button",
             "values": [
@@ -79,7 +66,7 @@
         },
         {
             "key": "storageStep",
-            "name": "Storage per level",
+            "name": "Storage: per level",
             "tooltip": "Larger stocks per storage level.",
             "uiType": "Button",
             "values": [
@@ -93,7 +80,7 @@
         },
         {
             "key": "efficiencyStep",
-            "name": "Efficiency per level",
+            "name": "Efficiency: per level",
             "tooltip": "Less input per efficiency level. A production cycle uses at most 5 times the game's amounts, so the saving of a level is rounded to whole units.",
             "uiType": "Button",
             "values": [
@@ -108,7 +95,7 @@
         },
         {
             "key": "efficiencyLevels",
-            "name": "Number of efficiency levels (up to -50% input)",
+            "name": "Efficiency: number of levels (up to -50% input)",
             "tooltip": "How many efficiency levels can be bought. Input never drops below half: at -10% only 5 levels count, at -5% 10.",
             "uiType": "Button",
             "values": [
@@ -123,7 +110,7 @@
         },
         {
             "key": "boosterStep",
-            "name": "Booster strength per level",
+            "name": "Booster: strength per level",
             "tooltip": "Stronger booster effect per level.",
             "uiType": "Button",
             "values": [
@@ -139,7 +126,7 @@
         },
         {
             "key": "boosterDemand",
-            "name": "Booster demand per level",
+            "name": "Booster: demand per level",
             "tooltip": "Every booster strength level also raises the cargo a booster needs by this share. Off: the demand stays the same.",
             "uiType": "Button",
             "values": [
@@ -155,7 +142,7 @@
         },
         {
             "key": "emissionStep",
-            "name": "Environmental filter per level",
+            "name": "Environmental filter: per level",
             "tooltip": "Less noise and pollution per level.",
             "uiType": "Button",
             "values": [
@@ -170,7 +157,7 @@
         },
         {
             "key": "workerBoostStep",
-            "name": "Worker boost per level",
+            "name": "Worker boost: per level",
             "tooltip": "Added to the worker boost per level: +80% becomes +105%.",
             "uiType": "Button",
             "values": [
@@ -184,8 +171,8 @@
         },
         {
             "key": "workersNeeded",
-            "name": "Workers needed per level",
-            "tooltip": "Every worker boost level also adds this share of workplaces, so the boost needs more workers arriving by line. Off: the workplaces stay the same. The workplaces stop at 40, because the game counts only the last 20 workers arriving by line.",
+            "name": "Worker boost: workers needed per level (max. 40)",
+            "tooltip": "Every worker boost level also adds this share of workplaces, so the boost needs more workers arriving by line. Off: the workplaces stay the same. The workplaces stop at 80, so the boost needs at most 40 workers. Not Off: this mod replaces the game's worker script, which can break other mods.",
             "uiType": "Button",
             "values": [
                 "Off",
@@ -199,8 +186,21 @@
             "yearTo": 0
         },
         {
+            "key": "workerLevels",
+            "name": "Worker boost: number of levels",
+            "tooltip": "How many worker boost levels can be bought.",
+            "uiType": "Button",
+            "values": [
+                "5",
+                "10"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
             "key": "upkeep",
-            "name": "Upkeep per level (per month)",
+            "name": "Upkeep: per level (per month)",
             "tooltip": "Money every built level costs each month, rising with inflation (x4 by 2000). In the finances under General, Upkeep Other.",
             "uiType": "Slider",
             "values": [
@@ -218,7 +218,7 @@
         },
         {
             "key": "upkeepRising",
-            "name": "Upkeep rises with the level",
+            "name": "Upkeep: rises with the level",
             "tooltip": "Yes: level n of an upgrade costs n times the upkeep, so 3 levels cost 1 + 2 + 3 = 6 times.",
             "uiType": "CheckBox",
             "values": [
@@ -230,8 +230,21 @@
             "yearTo": 0
         },
         {
+            "key": "upgradeCosts",
+            "name": "Upgrade costs",
+            "tooltip": "EXP points: industries earn points by running well and spend them on levels.\nDeliveries: levels are planned and paid with cargo delivered to the industry.",
+            "uiType": "Button",
+            "values": [
+                "EXP points",
+                "Deliveries"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
             "key": "expPerPoint",
-            "name": "[E] EXP per upgrade point",
+            "name": "EXP points: EXP per upgrade point",
             "tooltip": "EXP an industry needs for one upgrade point. Every condition met in a game month gives 1 EXP.",
             "uiType": "Slider",
             "values": [
@@ -249,7 +262,7 @@
         },
         {
             "key": "expAllConditions",
-            "name": "[E] 1 EXP only if all conditions are met",
+            "name": "EXP points: 1 EXP only if all conditions are met",
             "tooltip": "Yes: a month gives 1 EXP only when every condition switched on is met. No: 1 EXP for every condition met.",
             "uiType": "CheckBox",
             "values": [
@@ -262,7 +275,7 @@
         },
         {
             "key": "productionCondition",
-            "name": "[E] EXP for production (min. rating)",
+            "name": "EXP points: EXP for production (min. rating)",
             "tooltip": "1 EXP per month for a production rating at or above this value. Off: production gives no EXP.",
             "uiType": "Slider",
             "values": [
@@ -280,7 +293,7 @@
         },
         {
             "key": "primaryProduction",
-            "name": "[E] Production EXP also for raw materials",
+            "name": "EXP points: production EXP also for raw materials",
             "tooltip": "Yes: raw material producers (farms, mines, ...) get production EXP as well. No: only industries that process inputs do.",
             "uiType": "CheckBox",
             "values": [
@@ -293,7 +306,7 @@
         },
         {
             "key": "shippedCondition",
-            "name": "[E] EXP for shipping (min. share shipped)",
+            "name": "EXP points: EXP for shipping (min. share shipped)",
             "tooltip": "1 EXP per month for shipping at least this share of the output. Off: shipping gives no EXP.",
             "uiType": "Slider",
             "values": [
@@ -311,7 +324,7 @@
         },
         {
             "key": "shippedMode",
-            "name": "[E] Shipping EXP counts",
+            "name": "EXP points: shipping EXP counts",
             "tooltip": "All products together: shipped share of everything produced.\nBest product: at least one product reaches the share.\nBoth: 1 EXP for each.",
             "uiType": "Button",
             "values": [
@@ -325,7 +338,7 @@
         },
         {
             "key": "workersCondition",
-            "name": "[E] EXP for the worker boost",
+            "name": "EXP points: EXP for the worker boost",
             "tooltip": "1 EXP per month while the worker boost is active.",
             "uiType": "CheckBox",
             "values": [
@@ -338,7 +351,7 @@
         },
         {
             "key": "boosterCondition",
-            "name": "[E] EXP for boosters",
+            "name": "EXP points: EXP for boosters",
             "tooltip": "1 EXP per month while a booster such as fertilizer, tools or machines is active.",
             "uiType": "CheckBox",
             "values": [
@@ -351,7 +364,7 @@
         },
         {
             "key": "levelCost",
-            "name": "[E] Cost per level (points)",
+            "name": "EXP points: cost per level (points)",
             "tooltip": "Upgrade points one level costs.",
             "uiType": "Button",
             "values": [
@@ -365,7 +378,7 @@
         },
         {
             "key": "risingCost",
-            "name": "[E] Rising cost (+1 point per level)",
+            "name": "EXP points: rising cost (+1 point per level)",
             "tooltip": "Yes: every further level of an upgrade costs one point more.",
             "uiType": "CheckBox",
             "values": [
@@ -378,7 +391,7 @@
         },
         {
             "key": "resourceShare",
-            "name": "[D] Delivery amounts",
+            "name": "Deliveries: amounts",
             "tooltip": "Share of the cargo a delivery order needs. Lower values make upgrades cheaper.",
             "uiType": "Slider",
             "values": [
@@ -395,7 +408,7 @@
         },
         {
             "key": "orderDuration",
-            "name": "[D] Minimum duration per level (months)",
+            "name": "Deliveries: minimum duration per level (months)",
             "tooltip": "The first level of a delivery order takes at least this long, however fast the cargo arrives. Every further level of the same order adds half of it.",
             "uiType": "Button",
             "values": [
@@ -410,7 +423,7 @@
         },
         {
             "key": "orderMalus",
-            "name": "[D] Production malus during a delivery",
+            "name": "Deliveries: production malus during a delivery",
             "tooltip": "The industry produces this much less while a delivery order is open.",
             "uiType": "Button",
             "values": [

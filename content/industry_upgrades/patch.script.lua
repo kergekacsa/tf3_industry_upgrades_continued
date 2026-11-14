@@ -25,6 +25,11 @@
 --   (seen 2026-10-11). The wrapped function leaves the cargo of the order's stocks out. Industries
 --   making that cargo are still marked as suppliers when the industry is selected (the matching reads
 --   the stocks, cargo_util.getCargoTypesForStockList).
+-- worker row: the worker boost can be partial (workers.script.lua), so the row
+--   (industry_react_util.WorkplacesBoosterRow, in the Industry tab and the perk window) is replaced by
+--   one that shows the boost the industry has now with "Max." and its full boost under it, like the
+--   production card, and ticks only at the full boost. The base game's row shows the full boost and
+--   ticks at any boost above x1.
 -- Anything unexpected leaves the window as it is.
 local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
 local react = ug_require "::/gui/main/react.lua"
@@ -33,8 +38,16 @@ local industryUtil = ug_require "::/gui/main/industry_util.tl"
 local industryReactUtil = ug_require "::/gui/entity_window/industry_react_util.tl"
 local industryEow = ug_require "::/gui/entity_window/industry/industry_eow.script.tl" -- registers CargoBoosterRow
 local cargoReactUtil = ug_require "::/gui/main/cargo_react_util.tl"
+local engineReactUtil = ug_require "::/gui/main/engine_react_util.tl"
+local entityWindowUtil = ug_require "::/gui/entity_window/entity_window_util.tl"
+local guiReactUtil = ug_require "::/gui/main/gui_react_util.tl"
+local langUtil = ug_require "::/scripts/lang_util.tl"
+local productivityUtil = ug_require "::/industries/industry_productivity_util.tl"
 
 local INSTALLED = "industryUpgradesPatched" -- marker on the patched base game module
+local WORKER_ROW_INSTALLED = "industryUpgradesWorkerRow" -- marker on industry_react_util for the worker row
+local FULL_BOOST_TOLERANCE = 0.001
+local workerRow = nil -- our worker row recipe, registered with its patch (partialWorkerRow)
 
 -- Whether the booster card's row for a rule shows nothing: the order's rule, or a rule that is gone.
 -- A stock list that cannot be read (the industry is gone) keeps the base game's behaviour.
@@ -53,9 +66,10 @@ local function cargoBoosterRowId()
     local rowId = react.GetRecipeId(builtin.Row)
     local workplacesId = react.GetRecipeId(industryReactUtil.WorkplacesBoosterRow)
     if not rowId or not workplacesId then error("builtin.Row or WorkplacesBoosterRow not found", 0) end
+    local ownId = workerRow and react.GetRecipeId(workerRow) -- our worker row wraps builtin.Row as well
     local found = {}
     for id, meta in pairs(_react.recipeMetas) do
-        if type(meta) == "table" and meta.innerRecipeId == rowId and id ~= workplacesId then found[#found + 1] = id end
+        if type(meta) == "table" and meta.innerRecipeId == rowId and id ~= workplacesId and id ~= ownId then found[#found + 1] = id end
     end
     if #found ~= 1 then error(#found .. " candidates for CargoBoosterRow", 0) end
     return found[1]
@@ -154,29 +168,101 @@ local function hideHudCargo()
     return true
 end
 
+-- The worker row's figures: workers arrived by line and needed for the full boost, the boost now and
+-- the full boost (productivity factors, 1 = none).
+local function workerFigures(entity)
+    local figures = {arrived = 0, needed = 0, boost = 1, full = 1}
+    pcall(function()
+        local persons = api.engine.getComponent(entity, api.type.ComponentType.PERSON_CAPACITY)
+        if not persons or persons.capacity <= 0 then return end
+        figures.arrived = #productivityUtil.getVisitors(entity)
+        figures.needed = core.workersNeeded(persons.capacity, productivityUtil.RequiredWorkersFractionForBoost)
+        figures.boost = tonumber(productivityUtil.getIndustryProductivity(entity)) or 1
+        figures.full = tonumber(productivityUtil.getPersonCapacityPotentialBoost(entity)) or 1
+    end)
+    return figures
+end
+
+local function boostText(factor)
+    return "+" .. api.util.toStringPercentPrecision(factor - 1, 0)
+end
+
+local function registerWorkerRow()
+    return react.RegisterWrapperRecipe("IndustryUpgradesWorkerRow", builtin.Row, function(params)
+        local state = engineReactUtil.useStepState(function() return workerFigures(params.entity) end)
+        local figures = state:old()
+        local full = figures.full > 1 and figures.boost >= figures.full - FULL_BOOST_TOLERANCE
+        local class = full and "boosted" or ""
+        local function cell(child)
+            return builtin.Component{meta = {class = class}, layout = builtin.BoxLayout{
+                orientation = builtin.type.Orientation.Horizontal, children = {child}}}
+        end
+        local counted = math.min(figures.arrived, figures.needed)
+        local workers = {currentWorkers = langUtil.formatInt(figures.arrived), neededWorkers = langUtil.formatInt(figures.needed)}
+        return builtin.Row{cells = {
+            cell(industryReactUtil.IconAndLabelWidget{
+                icon = "::/gui/entity_window/icons/symbol_person.tga",
+                iconTooltip = _("Workers"),
+                count = langUtil.format("{currentWorkers}/{neededWorkers}", workers),
+                countTooltip = langUtil.format(_("{currentWorkers} of {neededWorkers} Workers"), workers),
+            }),
+            cell(entityWindowUtil.ProgressDisplay{
+                tooltip = langUtil.format("{count}/{total}", {count = langUtil.formatInt(counted), total = workers.neededWorkers}),
+                value = figures.needed > 0 and counted / figures.needed or 0,
+            }),
+            cell(builtin.BoxLayout{orientation = builtin.type.Orientation.Vertical, children = {
+                guiReactUtil.IconLabelIndicator{
+                    meta = {class = "boost-factor-indicator"},
+                    iconPath = "::/gui/entity_window/icons/building_industry.tga",
+                    label = boostText(figures.boost),
+                },
+                builtin.TextView{meta = {class = "font-scale-annotation", tooltip = _("Max.")},
+                    text = _("Max.") .. " " .. boostText(figures.full)},
+            }}),
+            cell(builtin.ImageView{meta = {class = "boost-tick-icon"}, path = "::/gui/entity_window/icons/circle_check.tga"}),
+        }}
+    end)
+end
+
+-- Returns true if it patched now, false if already patched; raises an error if the base game changed or
+-- another mod replaces the row already.
+local function partialWorkerRow()
+    if industryReactUtil[WORKER_ROW_INSTALLED] then return false end
+    if type(_react) ~= "table" or type(_react.recipeReplace) ~= "table" then error("react internals not available", 0) end
+    local id = industryReactUtil.WorkplacesBoosterRow and react.GetRecipeId(industryReactUtil.WorkplacesBoosterRow)
+    if not id then error("WorkplacesBoosterRow not found", 0) end
+    if _react.recipeReplace[id] then error("another mod replaces it", 0) end
+    workerRow = workerRow or registerWorkerRow()
+    industryReactUtil[WORKER_ROW_INSTALLED] = true
+    _react.recipeReplace[id] = function(params, ...) return workerRow(params, ...) end
+    return true
+end
+
+-- what a part does: hide (the order's parts) or show (the worker row's partial boost)
 local PARTS = {
-    {name = "booster row", install = hideBoosterRow},
-    {name = "boost", install = hideOrderBoost},
-    {name = "production row", install = hideProductionRow},
-    {name = "HUD cargo", install = hideHudCargo},
+    {name = "the order's booster row", done = "hidden", install = hideBoosterRow},
+    {name = "the order's boost", done = "hidden", install = hideOrderBoost},
+    {name = "the order's production row", done = "hidden", install = hideProductionRow},
+    {name = "the order's HUD cargo", done = "hidden", install = hideHudCargo},
+    {name = "the partial worker boost", done = "shown in the worker row", install = partialWorkerRow},
 }
 
 -- react-replacement-config: runs once before the GUI starts rendering. A part that fails (e.g. after a
--- game update) is reported and left out; the other still works.
+-- game update) is reported and left out; the others still work.
 local function doReplace(_replacementApi)
     local done = {}
     for _index, part in ipairs(PARTS) do
         local ok, result = pcall(part.install)
         if not ok then
-            log.warning(core.LOG_PREFIX .. "window: the order's " .. part.name .. " stays, " .. tostring(result))
+            log.warning(core.LOG_PREFIX .. "window: " .. part.name .. " stays as in the base game, " .. tostring(result))
         elseif result then
-            done[#done + 1] = part.name
+            done[#done + 1] = part.name .. " " .. part.done
         end
     end
-    if #done > 0 then log.message(core.LOG_PREFIX .. "window: the order's " .. table.concat(done, " and ") .. " hidden") end
+    if #done > 0 then log.message(core.LOG_PREFIX .. "window: " .. table.concat(done, ", ")) end
 end
 
 function data()
     return {doReplace = doReplace, hideBoosterRow = hideBoosterRow, hideOrderBoost = hideOrderBoost, hideProductionRow = hideProductionRow,
-        hideHudCargo = hideHudCargo}
+        hideHudCargo = hideHudCargo, partialWorkerRow = partialWorkerRow}
 end

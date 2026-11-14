@@ -7,6 +7,7 @@ return {
 
     -- The other upgrades: levels and effect per level.
     OTHER_MAX_LEVEL = 5,
+    WORKER_LEVELS = 5,        -- worker boost levels (setting "Number of worker boost levels")
     STORAGE_STEP = 0.5,       -- stocks x (1 + 0.5 * level)
     EFFICIENCY_STEP = 0.1,    -- input consumption x (1 - 0.1 * level), rounded to the recipe (core.recipeScale)
     EFFICIENCY_LEVELS = 5,    -- efficiency levels that can be bought, as far as EFFICIENCY_MIN allows
@@ -16,6 +17,10 @@ return {
     EMISSION_STEP = 0.15,     -- noise and pollution x (1 - 0.15 * level)
     WORKER_BOOST_STEP = 0.25, -- worker boost factor + 0.25 * level
     WORKERS_NEEDED = 0,       -- workplaces x (1 + WORKERS_NEEDED * worker boost level); 0 = off
+    -- The most workers an industry with worker boost levels counts for its boost while WORKERS_NEEDED
+    -- is on (core.workerLimit); not a setting. mod.script.lua sets it to 20 when another mod has
+    -- replaced the base game's worker script.
+    WORKER_LIMIT = 40,
 
     -- Buying level n costs COST_BASE + COST_STEP * (n - 1) points (default: 1 point per level).
     COST_BASE = 1,
@@ -41,7 +46,7 @@ return {
     -- How the shipped share counts at industries with several products (farm: grain and vegetables):
     -- 0 = all products together, 1 = the best product, 2 = both, +1 EXP each.
     SHIPPED_MODE = 1,
-    WORKERS_CONDITION = 1,       -- worker boost active
+    WORKERS_CONDITION = 1,       -- full worker boost active (a partial one does not count)
     BOOSTER_CONDITION = 1,       -- booster active
 
     -- What the upgrades cost (setting "Upgrade costs", chosen per game): 0 = EXP points, 1 = deliveries

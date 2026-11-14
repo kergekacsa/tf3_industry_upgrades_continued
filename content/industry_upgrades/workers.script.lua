@@ -1,24 +1,47 @@
 -- The base game's worker boost script (industries/industry_workers.script.tl), run in its place while
--- "Workers needed per level" is on and core.OWN_WORKER_SCRIPT is set (not yet released; mod.script.lua
--- redirects industry_workers.gs here). It is the same script with one change: the base game keeps the
--- last 20 arrivals by line of an industry (KeepHistoryCount), so a boost that needs more than 20 (over
--- 40 workplaces) could never come. This copy keeps as many as the industry's boost needs
--- (core.arrivalsKept). The game script entity, its state and its event stay the base game's, so
--- industry_productivity_util, the industry window and savegames read the arrivals as before; without
--- the redirect the base game cuts them to 20 again.
+-- "Workers needed per level" is on (mod.script.lua redirects industry_workers.gs here). It is the
+-- same script with two changes. The base game keeps the last 20 arrivals by line of an industry
+-- (KeepHistoryCount), so a boost that needs more than 20 (over 40 workplaces) never comes. At an
+-- industry with worker boost levels this copy keeps as many as its boost needs, up to the worker limit;
+-- at every other industry 20 (core.arrivalsKept). And every industry gets the boost in proportion to
+-- its workers, not only once all of them arrive (updateIndustryProductivity). The game script entity, its state and its event stay
+-- the base game's, so industry_productivity_util, the industry window and savegames read the arrivals
+-- as before; without the redirect the base game cuts them to 20 again.
 local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
 local entity_util = ug_require "::/scripts/entity_util.tl"
 local productivity = ug_require "::/industries/industry_productivity_util.tl"
 
 local LOG_PREFIX = core.LOG_PREFIX
 local started = false
+local configured = false -- whether this Lua state has applied the mod settings an industry carries
 local logged = {} -- industries logged keeping more arrivals than the base game, this session
 
-local function updateIndustryProductivity(entity, numVisitors)
-    local shouldBeBoosted = productivity.isIndustryWorkersBoosted(entity, numVisitors)
-    local isBoosted = productivity.getIndustryProductivity(entity) > 1.0
-    if shouldBeBoosted ~= isBoosted then
-        local newProductivity = shouldBeBoosted and productivity.getPersonCapacityPotentialBoost(entity) or 1.0
+-- Whether the industry (entity) has worker boost levels. Only industries whose construction script we
+-- wrapped have them; the first one also brings the mod settings into this Lua state.
+local function boosted(entity)
+    local industry = api.engine.getComponent(entity, api.type.ComponentType.INDUSTRY)
+    local construction = industry and api.engine.getComponent(industry.construction, api.type.ComponentType.CONSTRUCTION)
+    if not construction then return false end
+    local resId = api.res.constructionRep.find(construction.fileName)
+    local own = resId and resId >= 0 and core.ownEntry(api.res.constructionRep.get(resId))
+    if not own then return false end
+    if not configured then
+        local okSettings, settings = pcall(function() return own.settings end)
+        core.configure(okSettings and settings or nil)
+        configured = true
+    end
+    local params = construction.params_native and construction.params_native:asTable() or construction.params
+    return core.level(params, "workers") > 0
+end
+
+-- The base game sets the full boost or none; this copy sets the partial boost (core.workerProductivity)
+-- at every industry, and sends it only when it moves by PRODUCTIVITY_STEP or more.
+local PRODUCTIVITY_STEP = 0.001
+local function updateIndustryProductivity(entity, numVisitors, capacity)
+    local needed = core.workersNeeded(capacity, productivity.RequiredWorkersFractionForBoost)
+    local factor = numVisitors > 0 and productivity.getPersonCapacityPotentialBoost(entity) or 1
+    local newProductivity = core.workerProductivity(factor, numVisitors, needed, true)
+    if math.abs(newProductivity - productivity.getIndustryProductivity(entity)) >= PRODUCTIVITY_STEP then
         local newModifiers = api.type.StockList.Modifiers.new()
         newModifiers.productivity = newProductivity
         api.cmd.sendCommand(api.cmd.makeStockListSetModifiersCmd(entity, newModifiers))
@@ -34,7 +57,7 @@ function data()
             if dt == 0 then return end
             if not started then
                 started = true
-                log.message(LOG_PREFIX .. "worker boost: arrivals by line kept up to what the boost needs (base game: 20)")
+                log.message(LOG_PREFIX .. "worker boost: industries with worker boost levels keep the arrivals by line their boost needs, up to the worker limit (base game: 20)")
             end
 
             local state2 = state:get()
@@ -54,7 +77,7 @@ function data()
                         table.sort(pendingVisitors, function(a, b) return a.time > b.time end)
                         if industryState.lastVisitors == nil then industryState.lastVisitors = {} end
                         if industryState.pendingVisitors == nil then industryState.pendingVisitors = {} end
-                        local keep = core.arrivalsKept(persons.capacity, productivity.RequiredWorkersFractionForBoost)
+                        local keep = core.arrivalsKept(persons.capacity, productivity.RequiredWorkersFractionForBoost, boosted(entity))
                         local newLastVisitors = pendingVisitors
                         industryState.pendingVisitors = {}
                         for i = 1, #industryState.lastVisitors do
@@ -76,7 +99,7 @@ function data()
                             log.message(string.format("%sworker boost: industry %s keeps %d arrivals by line (%s workplaces, the boost needs %d)",
                                 LOG_PREFIX, tostring(entity), #newLastVisitors, tostring(persons.capacity), keep))
                         end
-                        updateIndustryProductivity(entity, #newLastVisitors)
+                        updateIndustryProductivity(entity, #newLastVisitors, persons.capacity)
                         stateChanged = true
                     end
                 else

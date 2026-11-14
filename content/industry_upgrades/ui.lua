@@ -77,7 +77,7 @@ local DESCRIPTIONS = {
     efficiency = "Less input for the same output.",
     booster = "Boosters such as fertilizer, tools or machines work more strongly.",
     boosterDemand = "Boosters such as fertilizer, tools or machines work more strongly and need more of their cargo.",
-    workersNeeded = "Higher production boost while enough workers arrive; every level adds workplaces, so more workers are needed.",
+    workersNeeded = "Higher production boost, in proportion to the workers arriving by line; every level adds workplaces, so more workers are needed for the full boost.",
     emission = "Less noise and pollution for nearby towns.",
     workers = "Higher production boost while enough workers arrive.",
 }
@@ -238,6 +238,15 @@ local function workerCounts(industryEntity)
         arrived = okVisitors and visitors and #visitors or 0,
         needed = math.ceil(capacity.capacity * fraction),
     }
+end
+
+-- The workplaces of the industry's own (before "Workers needed per level"): recorded by the rebuild,
+-- else the built ones at level 0, else found again from the built ones.
+local function ownWorkplaces(construction, capacity, level)
+    local metadata = construction and construction.persistentMetadata
+    local recorded = level > 0 and metadata and tonumber(metadata[core.WORKPLACES_BASE_META])
+    if recorded then return recorded end
+    return math.max(1, math.floor(capacity / core.workplaceFactor(level) + 0.5))
 end
 
 -- Id, display name and icon of a cargo resource name. They never change during a game,
@@ -427,11 +436,15 @@ function ui.snapshot(industryEntity)
     local workers = workerCounts(industryEntity)
     local okBoost, workerBoost = pcall(productivity.getPersonCapacityPotentialBoost, industryEntity)
     -- the workers the boost needs now and after the next worker boost level (setting "Workers needed per level")
+    -- base: the industry's own workplaces; calculated: the workers the next level needs before the worker limit
     local workersNeeded
     if workers and toLevels.workers and config.WORKERS_NEEDED ~= 0 then
         local fraction = tonumber(productivity.RequiredWorkersFractionForBoost) or 0.5
+        local base = ownWorkplaces(construction, workers.capacity, levels.workers)
         workersNeeded = {now = workers.needed,
-            next = math.ceil(core.workplaces(workers.capacity, levels.workers, toLevels.workers) * fraction - 1e-9)}
+            next = math.ceil(core.workplaces(workers.capacity, levels.workers, toLevels.workers) * fraction - 1e-9),
+            base = base, level = toLevels.workers, fraction = fraction,
+            calculated = math.ceil(base * core.workplaceFactor(toLevels.workers) * fraction - 1e-9)}
     end
     local isUsed = cargoInUse(industryEntity)
     -- a plan only while upgrades cost deliveries; one kept from before a switch to EXP points stays hidden
@@ -488,7 +501,7 @@ function ui.snapshot(industryEntity)
         end
     end
     if workers then parts[#parts + 1] = workers.assigned .. "/" .. workers.arrived .. "/" .. workers.capacity end
-    if workersNeeded then parts[#parts + 1] = "needed" .. workersNeeded.now .. ">" .. workersNeeded.next end
+    if workersNeeded then parts[#parts + 1] = "needed" .. workersNeeded.now .. ">" .. workersNeeded.next .. ":" .. workersNeeded.calculated end
     if order then
         parts[#parts + 1] = "order" .. tostring(order.built) .. tostring(order.ruleNumber)
         for _index, row in ipairs(order.rows) do parts[#parts + 1] = row.id .. row.from .. ">" .. row.to end
@@ -1043,9 +1056,19 @@ function ui.upgradeSection(s, id)
                 ui.icon(ui.ICONS.workers, tip),
                 text(ui.numberText(needed.now) .. " → " .. ui.numberText(needed.next), "font-scale-body", tip, true),
             })
-            if not core.ownWorkerScript() and needed.next >= core.ARRIVALS_KEPT then
-                children[#children + 1] = text(ui.tr("The game counts only the last {count} workers arriving by line, so the boost never needs more.",
-                    {count = core.ARRIVALS_KEPT}), "font-scale-annotation")
+            local overBase = needed.next > core.ARRIVALS_KEPT
+            local calculation = ui.tr("{base} workplaces × (1 + {share} × {level}) × {fraction} = {workers} workers", {
+                base = ui.numberText(needed.base), share = math.floor(config.WORKERS_NEEDED * 100 + 0.5) .. "%",
+                level = needed.level, fraction = math.floor(needed.fraction * 100 + 0.5) .. "%",
+                workers = ui.numberText(needed.calculated)})
+            children[#children + 1] = text(calculation, overBase and "font-scale-annotation, negative" or "font-scale-annotation", nil, true)
+            if overBase then
+                children[#children + 1] = text(ui.tr("Over {count} workers: this boost needs this mod's copy of the game's worker script, which can break other mods.",
+                    {count = core.ARRIVALS_KEPT}), "font-scale-annotation, negative")
+            end
+            if needed.next >= core.workerLimit() then
+                children[#children + 1] = text(ui.tr("The boost counts only the last {count} workers arriving by line, so it never needs more.",
+                    {count = core.workerLimit()}), "font-scale-annotation")
             end
         end
         if id == "booster" and s.boosterOutdated then

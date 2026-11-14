@@ -16,9 +16,13 @@ The fork keeps the mod ID `stardorn_industry_upgrades`, and its folder in the st
 | Refund | None | While a rebuild is refused and upgrades cost points, a button drops the waiting levels and returns their points at the current cost settings |
 | Monthly check (EXP, upkeep) | Once per month of game time at the default calendar speed, so at 1/8 calendar speed it runs 8 times per calendar month | Once per calendar month, at every calendar speed. With a calendar that stands still, once per month of game time as before |
 | Efficiency lot | A production cycle can use up to 20 times the game's amounts (a saw mill 77 logs instead of 4 at -4 %) | At most 5 times (`core.MAX_RECIPE_SCALE`). The saving of a level is rounded to whole units, so some levels save nothing until the next one |
-| Texts | None | The worker boost card and the "Workers needed per level" tooltip say that the workers needed stop at 20. The booster card says when its inputs were built under another "Booster demand per level". The help says that a changed setting reaches built levels at the next upgrade |
+| Worker limit | The worker boost counts at most 20 workers, so with "Workers needed per level" the workplaces stop at 40 | While "Workers needed per level" is on, industries with worker boost levels count up to 40 workers, and their workplaces stop at 80. Every other industry keeps 20. Only then does the fork replace the base game's worker script, and not when another mod has already replaced it |
+| Partial worker boost | All or nothing: the boost comes only once all the workers needed arrive | While "Workers needed per level" is on, every industry gets the boost in proportion to its workers (15 of 40 workers: 15/40 of the boost). The worker row in the industry window shows the boost now with "Max." and the full boost under it, and ticks only at the full boost. The EXP condition "worker boost active" counts only the full boost |
+| Worker boost levels | 5 | The setting "Worker boost: number of levels": 5 or 10 |
+| Settings | The order of the original, with `[E]` and `[D]` marks for the EXP and delivery settings | Grouped in this order, each name starting with its group: Throughput, Storage, Efficiency, Booster, Environmental filter, Worker boost, Upkeep, the "Upgrade costs" switch, EXP points, Deliveries. The game's mod settings screen has no dividers and shows no tooltips, so the maximum of 40 workers is in the name of "Workers needed per level" |
+| Texts | None | The worker boost card shows the calculation of the workers the next level needs, in red above 20, and says that more than 20 need the fork's copy of the worker script. The booster card says when its inputs were built under another "Booster demand per level". The help says that a changed setting reaches built levels at the next upgrade |
 
-Delivery orders keep their timing in game time: at a slow calendar speed an order is shorter in calendar months than its minimum duration. An industry built before the efficiency change keeps its large lots until its next upgrade.
+Delivery orders keep their timing in game time: at a slow calendar speed an order is shorter in calendar months than its minimum duration. An industry built before the efficiency change keeps its large lots until its next upgrade. When a savegame is loaded, the industries whose workplaces no longer fit "Workers needed per level" are rebuilt, for example after it was switched on or off.
 
 ## Refused rebuild
 
@@ -36,6 +40,7 @@ Run each test from the mod folder with `lua55 tests/<name>.lua`. `tests/support.
 | `calendar_test.lua` | One monthly check and one upkeep booking per calendar month at calendar speeds ×1, ×0.25 and ×0.125, a state saved before the calendar month was kept, and a calendar that stands still |
 | `efficiency_test.lua` | The lot cap for every step setting, that no level needs more input than the one before, the recorded recipe scale, and that the preview matches the rebuild |
 | `booster_test.lua` | The check for booster inputs built under another "Booster demand per level" |
+| `workers_test.lua` | The worker limit with "Workers needed per level" off and on, the workplaces it allows, the number of worker boost levels, the partial and the all-or-nothing boost, the workers the worker script keeps with and without worker boost levels and the boost it sets, and the replacement of the base game's worker script, which gives way to another mod's |
 
 ## Use
 

@@ -91,9 +91,13 @@ local function applySettings(root)
     end
 end
 
-local function workersBoosted(stockList)
-    local ok, productivity = pcall(function() return stockList.modifiers.productivity end)
-    return ok and (tonumber(productivity) or 0) > 1.0
+-- Whether the industry has its full worker boost; a partial boost (workers.script.lua) does not count.
+local function workersBoosted(entity, stockList)
+    local ok, boosted = pcall(function()
+        local current = tonumber(stockList.modifiers.productivity) or 0
+        return current > 1.0 and current >= productivity.getPersonCapacityPotentialBoost(entity) - 0.001
+    end)
+    return ok and boosted == true
 end
 
 -- Primary industries (no production inputs) always run at full production, so the production
@@ -238,13 +242,18 @@ local function newRecord(params, now, month)
 end
 
 -- After a worker boost upgrade the base game keeps the old boost until the boost state changes;
--- bring a boosted industry to its new factor right away.
-local function syncWorkerBoost(entity, params)
-    if core.level(params, "workers") == 0 then return end
+-- bring a boosted industry to its new factor right away, or to its share of it while the boost is
+-- partial (workers.script.lua). Also for industries without levels: with "Workers needed per level"
+-- switched off, the base game's script takes a partial boost for a full one and keeps it.
+local function syncWorkerBoost(entity)
     local stockList = api.engine.getComponent(entity, api.type.ComponentType.STOCK_LIST)
     local current = stockList and stockList.modifiers and tonumber(stockList.modifiers.productivity) or 1
     if current <= 1.0 then return end
-    local expected = productivity.getPersonCapacityPotentialBoost(entity)
+    local persons = api.engine.getComponent(entity, api.type.ComponentType.PERSON_CAPACITY)
+    if not persons then return end
+    local expected = core.workerProductivity(productivity.getPersonCapacityPotentialBoost(entity),
+        #productivity.getVisitors(entity), core.workersNeeded(persons.capacity, productivity.RequiredWorkersFractionForBoost),
+        core.ownWorkerScript())
     if not expected or math.abs(current - expected) < 0.001 then return end
     local modifiers = api.type.StockList.Modifiers.new()
     modifiers.productivity = expected
@@ -675,7 +684,7 @@ local function monthlyPass(root, now, month)
         seen[key] = true
         local params = copyParams(construction)
         local record = ensureRecord(root, key, params, now, month)
-        pcall(syncWorkerBoost, entity, params)
+        pcall(syncWorkerBoost, entity)
 
         if record.ratingReset and core.resetOver(record.ratingReset, now, 12 * month) then record.ratingReset = nil end
         -- EXP only while upgrades cost points: the points and EXP of an earlier EXP phase stay as they are
@@ -692,7 +701,7 @@ local function monthlyPass(root, now, month)
                     and core.countedRating(api.engine.util.stock.getProductionRating(industry.stockList), record.ratingReset, now, 12 * month) or nil,
                 api.engine.util.stock.getCargoShippedPerYear(industry.stockList),
                 api.engine.util.stock.getCargoOutputPerYear(industry.stockList),
-                workersBoosted(stockList),
+                workersBoosted(entity, stockList),
                 boosterActive(entity, stockList),
                 bestShare, bestCargo)
             detail.exp = exp
@@ -984,7 +993,7 @@ local function fitOrders(root, now)
 end
 
 -- Industries whose workplaces no longer fit "Workers needed per level" (changeable when a savegame is
--- loaded; limited to 40 since revision 8): their workplaces only change with a rebuild, so each of them
+-- loaded, and it switches the worker limit): their workplaces only change with a rebuild, so each of them
 -- is queued once per load; the rebuild builds the workplaces of the current setting (core.applyUpgrades).
 -- True when anything changed.
 local function fitWorkplaces(root)

@@ -18,6 +18,17 @@ local function levelValues(max)
     return values
 end
 
+-- Whether a game script's update file is the base game's worker script (core.BASE_WORKERS_UPDATE),
+-- relative or with its path, and not one of another mod (a namespace before "::").
+local function baseWorkerUpdate(fileName)
+    if type(fileName) ~= "string" then return false end
+    local name = fileName:gsub("\\", "/")
+    local namespace = name:match("^(.-)::")
+    if namespace and namespace ~= "" then return false end
+    local base = core.BASE_WORKERS_UPDATE
+    return name == base or name:sub(-#base - 1) == "/" .. base
+end
+
 function data()
     return {
         -- Parameters must not be called "_": that would hide the localisation function _().
@@ -30,19 +41,26 @@ function data()
             settings.ECONOMY = core.economy(gameSettings)
             core.configure(settings)
 
-            -- With "Workers needed per level" a worker boost could need more than 20 arrivals by line, but the
-            -- base game's worker script keeps only the last 20. Once core.OWN_WORKER_SCRIPT is on, its game
-            -- script runs our copy instead, which keeps as many as the boost needs (workers.script.lua);
-            -- until then the workplaces stop at 40 (core.workplaceLimit). Without the setting nothing changes.
+            -- "Workers needed per level" on: the base game's worker script runs our copy, which counts up to
+            -- config.WORKER_LIMIT workers at industries with worker boost levels (workers.script.lua). Off:
+            -- nothing is replaced. When another mod has replaced the worker script already, ours stays out
+            -- and the limit falls back to 20 in the settings the industries carry.
             if core.ownWorkerScript() then
                 addModifier("loadGameScript", function(fileName, script)
                     local name = type(fileName) == "string" and fileName:gsub("\\", "/") or ""
                     if type(script) ~= "table" or not name:find(core.BASE_WORKERS_GAME_SCRIPT, 1, true) then return script end
-                    script.updateScript = script.updateScript or {}
+                    local say = log and log.message or print
+                    local update = script.updateScript and script.updateScript.fileName
+                    if not baseWorkerUpdate(update) then
+                        settings.WORKER_LIMIT = core.ARRIVALS_KEPT
+                        core.configure(settings)
+                        say(string.format("%sworker boost: %s already runs %s from another mod, so the worker limit stays %d",
+                            core.LOG_PREFIX, name, tostring(update), core.ARRIVALS_KEPT))
+                        return script
+                    end
                     script.updateScript.fileName = core.WORKERS_SCRIPT .. "@update"
                     script.handleEventScript = script.handleEventScript or {}
                     script.handleEventScript.fileName = core.WORKERS_SCRIPT .. "@handleEvent"
-                    local say = log and log.message or print
                     say(core.LOG_PREFIX .. "worker boost: " .. name .. " runs " .. core.WORKERS_SCRIPT)
                     return script
                 end)

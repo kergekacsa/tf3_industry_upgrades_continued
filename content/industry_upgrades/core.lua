@@ -78,6 +78,7 @@ core.LOG_PREFIX = "Industry Upgrades: "
 -- only as many as keep the input at EFFICIENCY_MIN or above (10 % steps: 5, 5 % steps: 10).
 local function maxLevel(id)
     if id == "throughput" then return config.MAX_LEVEL end
+    if id == "workers" then return config.WORKER_LEVELS end
     if id == "efficiency" then
         if config.EFFICIENCY_STEP <= 0 then return 0 end
         return math.max(0, math.min(config.EFFICIENCY_LEVELS, math.floor((1 - config.EFFICIENCY_MIN) / config.EFFICIENCY_STEP + 1e-9)))
@@ -491,24 +492,32 @@ end
 
 -- The base game's worker script (industries/industry_workers.script.tl) keeps only the last 20 arrivals
 -- by line of an industry (KeepHistoryCount), and the boost needs half of the workplaces to arrive
--- (RequiredWorkersFractionForBoost), so beyond 40 workplaces a boost could never come (reported on
--- mod.io 2026-10-16). "Workers needed per level" builds at most MAX_WORKPLACES; an industry with more
--- workplaces of its own keeps them. OWN_WORKER_SCRIPT (not yet released, see workers.script.lua): the
--- base game's script runs our copy instead, which keeps as many arrivals as the boost needs, and the
--- workplaces have no limit.
+-- (RequiredWorkersFractionForBoost), so beyond 40 workplaces a boost never comes. While "Workers needed
+-- per level" is on, our copy runs instead (workers.script.lua), which keeps up to config.WORKER_LIMIT
+-- arrivals at industries with worker boost levels and 20 at every other industry. "Workers needed per
+-- level" builds at most WORKPLACES_PER_WORKER x the worker limit; an industry with more workplaces of
+-- its own keeps them.
 core.ARRIVALS_KEPT = 20
-core.MAX_WORKPLACES = 40
-core.OWN_WORKER_SCRIPT = false
+core.WORKPLACES_PER_WORKER = 2
+-- The update script the base game's industry_workers.gs names. Another one means that another mod
+-- replaced the worker script, and ours stays out (mod.script.lua).
+core.BASE_WORKERS_UPDATE = "industry_workers.script@update"
+
+-- The most workers an industry with worker boost levels counts for its boost in this game: the base
+-- game's 20 while "Workers needed per level" is off.
+function core.workerLimit()
+    if config.WORKERS_NEEDED == 0 then return core.ARRIVALS_KEPT end
+    return math.max(core.ARRIVALS_KEPT, math.floor(tonumber(config.WORKER_LIMIT) or core.ARRIVALS_KEPT))
+end
 
 -- Whether the base game's worker script runs our copy in this game (mod.script.lua).
 function core.ownWorkerScript()
-    return core.OWN_WORKER_SCRIPT and config.WORKERS_NEEDED ~= 0
+    return core.workerLimit() > core.ARRIVALS_KEPT
 end
 
 -- The most workplaces "Workers needed per level" builds at an industry whose own are base.
 function core.workplaceLimit(base)
-    if core.ownWorkerScript() then return math.huge end
-    return math.max(tonumber(base) or 0, core.MAX_WORKPLACES)
+    return math.max(tonumber(base) or 0, core.WORKPLACES_PER_WORKER * core.workerLimit())
 end
 
 -- The workplaces an industry whose own are base gets at a worker boost level.
@@ -540,10 +549,28 @@ function core.workplacesOutdated(level, built, base)
 end
 
 -- The arrivals by line our copy of the base game's worker script keeps per industry: the base game's
--- 20, or as many as the boost needs if that is more (industry_productivity_util.isIndustryWorkersBoosted:
--- arrivals >= workplaces x fraction).
-function core.arrivalsKept(capacity, fraction)
-    return math.max(core.ARRIVALS_KEPT, math.ceil((tonumber(capacity) or 0) * (tonumber(fraction) or 0.5)))
+-- 20, or at an industry with worker boost levels (boosted) as many as the boost needs
+-- (industry_productivity_util.isIndustryWorkersBoosted: arrivals >= workplaces x fraction), up to the
+-- worker limit.
+function core.arrivalsKept(capacity, fraction, boosted)
+    if not boosted then return core.ARRIVALS_KEPT end
+    local needed = math.ceil((tonumber(capacity) or 0) * (tonumber(fraction) or 0.5) - 1e-9)
+    return math.max(core.ARRIVALS_KEPT, math.min(core.workerLimit(), needed))
+end
+
+-- The workers the full worker boost needs at an industry with capacity workplaces.
+function core.workersNeeded(capacity, fraction)
+    return math.ceil((tonumber(capacity) or 0) * (tonumber(fraction) or 0.5) - 1e-9)
+end
+
+-- The productivity the worker boost gives an industry whose full boost is factor, with arrived of the
+-- needed workers. The base game's rule is all or nothing; partial (our copy of the worker script runs)
+-- gives the boost in proportion to the workers.
+function core.workerProductivity(factor, arrived, needed, partial)
+    factor, arrived, needed = tonumber(factor) or 1, tonumber(arrived) or 0, tonumber(needed) or 0
+    if arrived <= 0 or needed <= 0 then return 1 end
+    if arrived >= needed then return factor end
+    return partial and 1 + (factor - 1) * arrived / needed or 1
 end
 
 -- Applies every bought upgrade to the result of the original construction script.

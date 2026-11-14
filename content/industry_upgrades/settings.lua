@@ -23,6 +23,7 @@ return {
     {key = "emissionStep", config = "EMISSION_STEP", values = {0.05, 0.1, 0.15, 0.2}},
     {key = "workerBoostStep", config = "WORKER_BOOST_STEP", values = {0.1, 0.25, 0.5}},
     {key = "workersNeeded", config = "WORKERS_NEEDED", values = {0, 0.1, 0.25, 0.5, 1}},
+    {key = "workerLevels", config = "WORKER_LEVELS", values = {5, 10}},
     {key = "upkeep", config = "UPKEEP_BASE", values = {0, 1000, 2500, 5000, 10000, 25000, 50000}},
     {key = "upkeepRising", config = "UPKEEP_RISING", values = {0, 1}},
     {key = "resourceShare", config = "RESOURCE_SHARE", values = {0.1, 0.25, 0.5, 1, 1.5, 2}},
