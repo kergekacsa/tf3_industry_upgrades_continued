@@ -1,0 +1,31 @@
+-- The mod settings (mod.json params, picked in the mod settings when a game is started): the config
+-- value each one sets and the number behind every choice. mod.json lists the same choices for the
+-- menu, in the same order (checked by the tests). For the conditions, 0 switches them off.
+return {
+    {key = "upgradeCosts", config = "DELIVERY_MODE", values = {0, 1}},
+    {key = "expPerPoint", config = "EXP_PER_POINT", values = {4, 6, 8, 10, 12, 18, 24}},
+    {key = "expAllConditions", config = "EXP_ALL_CONDITIONS", values = {0, 1}},
+    {key = "productionCondition", config = "PRODUCTION_THRESHOLD", values = {0, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9}},
+    {key = "primaryProduction", config = "PRIMARY_PRODUCTION", values = {0, 1}},
+    {key = "shippedCondition", config = "SHIPPED_THRESHOLD", values = {0, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9}},
+    {key = "shippedMode", config = "SHIPPED_MODE", values = {0, 1, 2}},
+    {key = "workersCondition", config = "WORKERS_CONDITION", values = {0, 1}},
+    {key = "boosterCondition", config = "BOOSTER_CONDITION", values = {0, 1}},
+    {key = "levelCost", config = "COST_BASE", values = {1, 2, 3}},
+    {key = "risingCost", config = "COST_STEP", values = {0, 1}},
+    {key = "throughputStep", config = "THROUGHPUT_STEP", values = {0.05, 0.1, 0.125, 0.15, 0.2, 0.25, 0.5}},
+    {key = "throughputLevels", config = "MAX_LEVEL", values = {5, 10, 15, 20}},
+    {key = "storageStep", config = "STORAGE_STEP", values = {0.25, 0.5, 1}},
+    {key = "efficiencyStep", config = "EFFICIENCY_STEP", values = {0.01, 0.02, 0.05, 0.1}},
+    {key = "efficiencyLevels", config = "EFFICIENCY_LEVELS", values = {5, 10, 15, 20}},
+    {key = "boosterStep", config = "BOOSTER_STEP", values = {0.1, 0.15, 0.2, 0.25, 0.5}},
+    {key = "boosterDemand", config = "BOOSTER_DEMAND", values = {0, 0.1, 0.25, 0.5, 1}},
+    {key = "emissionStep", config = "EMISSION_STEP", values = {0.05, 0.1, 0.15, 0.2}},
+    {key = "workerBoostStep", config = "WORKER_BOOST_STEP", values = {0.1, 0.25, 0.5}},
+    {key = "workersNeeded", config = "WORKERS_NEEDED", values = {0, 0.1, 0.25, 0.5, 1}},
+    {key = "upkeep", config = "UPKEEP_BASE", values = {0, 1000, 2500, 5000, 10000, 25000, 50000}},
+    {key = "upkeepRising", config = "UPKEEP_RISING", values = {0, 1}},
+    {key = "resourceShare", config = "RESOURCE_SHARE", values = {0.1, 0.25, 0.5, 1, 1.5, 2}},
+    {key = "orderDuration", config = "RESOURCE_YEARS", values = {0.25, 0.5, 1, 2}},
+    {key = "orderMalus", config = "ORDER_MALUS", values = {0, 0.1, 0.25, 0.5}},
+}

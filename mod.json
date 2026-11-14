@@ -1,0 +1,427 @@
+{
+    "dependencies": null,
+    "incompatibilities": null,
+    "modId": "stardorn_industry_upgrades",
+    "revision": 8,
+    "options": null,
+    "visible": true,
+    "cosmetic": false,
+    "severityAdd": "Warning",
+    "severityRemove": "Warning",
+    "preRunScript": {
+        "fileName": ""
+    },
+    "runScript": {
+        "fileName": "stardorn_industry_upgrades::/mod.script@runFn"
+    },
+    "postRunScript": {
+        "fileName": ""
+    },
+    "params": [
+        {
+            "key": "uiMode",
+            "name": "Upgrades display",
+            "tooltip": "Own tab: an 'Upgrades' tab next to 'Industry' in the industry window.\nCard: a compact card inside the 'Industry' tab. Use this if the own tab causes trouble.",
+            "uiType": "ComboBox",
+            "values": [
+                "Own tab",
+                "Card in the Industry tab"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "upgradeCosts",
+            "name": "Upgrade costs",
+            "tooltip": "EXP points: industries earn points by running well and spend them on levels.\nDeliveries: levels are planned and paid with cargo delivered to the industry.",
+            "uiType": "Button",
+            "values": [
+                "EXP points [E]",
+                "Deliveries [D]"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "throughputStep",
+            "name": "Throughput per level",
+            "tooltip": "More production cycles per throughput level.",
+            "uiType": "Slider",
+            "values": [
+                "+5%",
+                "+10%",
+                "+12.5%",
+                "+15%",
+                "+20%",
+                "+25%",
+                "+50%"
+            ],
+            "defaultIndex": 2,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "throughputLevels",
+            "name": "Number of throughput levels",
+            "tooltip": "How many throughput levels can be bought.",
+            "uiType": "Button",
+            "values": [
+                "5",
+                "10",
+                "15",
+                "20"
+            ],
+            "defaultIndex": 1,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "storageStep",
+            "name": "Storage per level",
+            "tooltip": "Larger stocks per storage level.",
+            "uiType": "Button",
+            "values": [
+                "+25%",
+                "+50%",
+                "+100%"
+            ],
+            "defaultIndex": 1,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "efficiencyStep",
+            "name": "Efficiency per level",
+            "tooltip": "Less input per efficiency level. Steps below 10% are rounded to the recipe.",
+            "uiType": "Button",
+            "values": [
+                "-1%",
+                "-2%",
+                "-5%",
+                "-10%"
+            ],
+            "defaultIndex": 3,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "efficiencyLevels",
+            "name": "Number of efficiency levels (up to -50% input)",
+            "tooltip": "How many efficiency levels can be bought. Input never drops below half: at -10% only 5 levels count, at -5% 10.",
+            "uiType": "Button",
+            "values": [
+                "5",
+                "10",
+                "15",
+                "20"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "boosterStep",
+            "name": "Booster strength per level",
+            "tooltip": "Stronger booster effect per level.",
+            "uiType": "Button",
+            "values": [
+                "+10%",
+                "+15%",
+                "+20%",
+                "+25%",
+                "+50%"
+            ],
+            "defaultIndex": 3,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "boosterDemand",
+            "name": "Booster demand per level",
+            "tooltip": "Every booster strength level also raises the cargo a booster needs by this share. Off: the demand stays the same.",
+            "uiType": "Button",
+            "values": [
+                "Off",
+                "+10%",
+                "+25%",
+                "+50%",
+                "+100%"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "emissionStep",
+            "name": "Environmental filter per level",
+            "tooltip": "Less noise and pollution per level.",
+            "uiType": "Button",
+            "values": [
+                "-5%",
+                "-10%",
+                "-15%",
+                "-20%"
+            ],
+            "defaultIndex": 2,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "workerBoostStep",
+            "name": "Worker boost per level",
+            "tooltip": "Added to the worker boost per level: +80% becomes +105%.",
+            "uiType": "Button",
+            "values": [
+                "+10%",
+                "+25%",
+                "+50%"
+            ],
+            "defaultIndex": 1,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "workersNeeded",
+            "name": "Workers needed per level",
+            "tooltip": "Every worker boost level also adds this share of workplaces, so the boost needs more workers arriving by line. Off: the workplaces stay the same.",
+            "uiType": "Button",
+            "values": [
+                "Off",
+                "+10%",
+                "+25%",
+                "+50%",
+                "+100%"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "upkeep",
+            "name": "Upkeep per level (per month)",
+            "tooltip": "Money every built level costs each month, rising with inflation (x4 by 2000). In the finances under General, Upkeep Other.",
+            "uiType": "Slider",
+            "values": [
+                "Off",
+                "1000",
+                "2500",
+                "5000",
+                "10000",
+                "25000",
+                "50000"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "upkeepRising",
+            "name": "Upkeep rises with the level",
+            "tooltip": "Yes: level n of an upgrade costs n times the upkeep, so 3 levels cost 1 + 2 + 3 = 6 times.",
+            "uiType": "CheckBox",
+            "values": [
+                "No",
+                "Yes"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "expPerPoint",
+            "name": "[E] EXP per upgrade point",
+            "tooltip": "EXP an industry needs for one upgrade point. Every condition met in a game month gives 1 EXP.",
+            "uiType": "Slider",
+            "values": [
+                "4",
+                "6",
+                "8",
+                "10",
+                "12",
+                "18",
+                "24"
+            ],
+            "defaultIndex": 4,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "expAllConditions",
+            "name": "[E] 1 EXP only if all conditions are met",
+            "tooltip": "Yes: a month gives 1 EXP only when every condition switched on is met. No: 1 EXP for every condition met.",
+            "uiType": "CheckBox",
+            "values": [
+                "No",
+                "Yes"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "productionCondition",
+            "name": "[E] EXP for production (min. rating)",
+            "tooltip": "1 EXP per month for a production rating at or above this value. Off: production gives no EXP.",
+            "uiType": "Slider",
+            "values": [
+                "Off",
+                "50%",
+                "60%",
+                "70%",
+                "75%",
+                "80%",
+                "90%"
+            ],
+            "defaultIndex": 4,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "primaryProduction",
+            "name": "[E] Production EXP also for raw materials",
+            "tooltip": "Yes: raw material producers (farms, mines, ...) get production EXP as well. No: only industries that process inputs do.",
+            "uiType": "CheckBox",
+            "values": [
+                "No",
+                "Yes"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "shippedCondition",
+            "name": "[E] EXP for shipping (min. share shipped)",
+            "tooltip": "1 EXP per month for shipping at least this share of the output. Off: shipping gives no EXP.",
+            "uiType": "Slider",
+            "values": [
+                "Off",
+                "50%",
+                "60%",
+                "70%",
+                "75%",
+                "80%",
+                "90%"
+            ],
+            "defaultIndex": 4,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "shippedMode",
+            "name": "[E] Shipping EXP counts",
+            "tooltip": "All products together: shipped share of everything produced.\nBest product: at least one product reaches the share.\nBoth: 1 EXP for each.",
+            "uiType": "Button",
+            "values": [
+                "All together",
+                "Best product",
+                "Both (+1 each)"
+            ],
+            "defaultIndex": 1,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "workersCondition",
+            "name": "[E] EXP for the worker boost",
+            "tooltip": "1 EXP per month while the worker boost is active.",
+            "uiType": "CheckBox",
+            "values": [
+                "Off",
+                "On"
+            ],
+            "defaultIndex": 1,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "boosterCondition",
+            "name": "[E] EXP for boosters",
+            "tooltip": "1 EXP per month while a booster such as fertilizer, tools or machines is active.",
+            "uiType": "CheckBox",
+            "values": [
+                "Off",
+                "On"
+            ],
+            "defaultIndex": 1,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "levelCost",
+            "name": "[E] Cost per level (points)",
+            "tooltip": "Upgrade points one level costs.",
+            "uiType": "Button",
+            "values": [
+                "1",
+                "2",
+                "3"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "risingCost",
+            "name": "[E] Rising cost (+1 point per level)",
+            "tooltip": "Yes: every further level of an upgrade costs one point more.",
+            "uiType": "CheckBox",
+            "values": [
+                "No",
+                "Yes"
+            ],
+            "defaultIndex": 0,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "resourceShare",
+            "name": "[D] Delivery amounts",
+            "tooltip": "Share of the cargo a delivery order needs. Lower values make upgrades cheaper.",
+            "uiType": "Slider",
+            "values": [
+                "10%",
+                "25%",
+                "50%",
+                "100%",
+                "150%",
+                "200%"
+            ],
+            "defaultIndex": 3,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "orderDuration",
+            "name": "[D] Minimum duration per level (months)",
+            "tooltip": "The first level of a delivery order takes at least this long, however fast the cargo arrives. Every further level of the same order adds half of it.",
+            "uiType": "Button",
+            "values": [
+                "3",
+                "6",
+                "12",
+                "24"
+            ],
+            "defaultIndex": 2,
+            "yearFrom": 0,
+            "yearTo": 0
+        },
+        {
+            "key": "orderMalus",
+            "name": "[D] Production malus during a delivery",
+            "tooltip": "The industry produces this much less while a delivery order is open.",
+            "uiType": "Button",
+            "values": [
+                "Off",
+                "-10%",
+                "-25%",
+                "-50%"
+            ],
+            "defaultIndex": 2,
+            "yearFrom": 0,
+            "yearTo": 0
+        }
+    ]
+}
