@@ -1,4 +1,4 @@
-local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
+local core = require "kacsa_industry_upgrades::/industry_upgrades/core.lua"
 
 local PARAM_NAMES = {
     throughput = "Throughput upgrade",
