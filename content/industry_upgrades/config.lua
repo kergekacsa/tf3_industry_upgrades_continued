@@ -8,7 +8,7 @@ return {
     -- The other upgrades: levels and effect per level.
     OTHER_MAX_LEVEL = 5,
     STORAGE_STEP = 0.5,       -- stocks x (1 + 0.5 * level)
-    EFFICIENCY_STEP = 0.1,    -- input consumption x (1 - 0.1 * level); below 10 % rounded to the recipe
+    EFFICIENCY_STEP = 0.1,    -- input consumption x (1 - 0.1 * level), rounded to the recipe (core.recipeScale)
     EFFICIENCY_LEVELS = 5,    -- efficiency levels that can be bought, as far as EFFICIENCY_MIN allows
     EFFICIENCY_MIN = 0.5,     -- input never drops below half (5 x 10 %, the most before the setting)
     BOOSTER_STEP = 0.25,      -- booster effect x (1 + 0.25 * level)
@@ -24,11 +24,11 @@ return {
     -- Upkeep (setting "Upkeep per level", both modes): every built level costs UPKEEP_BASE money a month,
     -- x the base game's inflation (x1 up to 1900, x4 from 2000, like its subsidies). With UPKEEP_RISING
     -- level n of an upgrade costs n x UPKEEP_BASE, so 3 levels cost 1 + 2 + 3 = 6 x. Charged once a
-    -- game month, in the finances under General, Upkeep Other. 0 = no upkeep.
+    -- calendar month, in the finances under General, Upkeep Other. 0 = no upkeep.
     UPKEEP_BASE = 0,
     UPKEEP_RISING = 0,
 
-    -- Experience: every game month, each condition met gives +1 EXP: production rating (industries
+    -- Experience: every calendar month, each condition met gives +1 EXP: production rating (industries
     -- that process inputs, unless PRIMARY_PRODUCTION) and shipped share at or above the thresholds
     -- below, worker boost active, booster active (industries with boosters). A threshold or switch of
     -- 0 turns the condition off. EXP_PER_POINT EXP turn into 1 upgrade point.

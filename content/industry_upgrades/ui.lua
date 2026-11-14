@@ -212,8 +212,9 @@ local function previews(industryEntity, levels, toLevels, orderBuilt)
         result.throughput = ok and items or nil
     end
     if hasInput and toLevels.efficiency then
+        local _constructionId, construction = ui.constructionOf(industryEntity)
         local ok, items = pcall(core.efficiencyPreview, stockList.rules, stockList.stocks, boost, levels.efficiency, isInput, cargoName,
-            toLevels.efficiency)
+            toLevels.efficiency, construction and construction.persistentMetadata)
         result.efficiency = ok and items or nil
     end
     if hasBooster and toLevels.booster and config.BOOSTER_DEMAND ~= 0 then
@@ -421,6 +422,8 @@ function ui.snapshot(industryEntity)
     if order and order.built and not core.plainOrderRule() then order.ruleNumber = orderRuleNumber(industryEntity) end
     if order then addOrderStocks(industryEntity, order) end
     local preview, hasInput, hasBooster = previews(industryEntity, levels, toLevels, order ~= nil and order.built)
+    local stockList = api.engine.getComponent(industryEntity, api.type.ComponentType.STOCK_LIST)
+    local okOutdated, boosterOutdated = pcall(core.boosterOutdated, stockList and stockList.rules, levels.booster)
     local workers = workerCounts(industryEntity)
     local okBoost, workerBoost = pcall(productivity.getPersonCapacityPotentialBoost, industryEntity)
     -- the workers the boost needs now and after the next worker boost level (setting "Workers needed per level")
@@ -450,6 +453,8 @@ function ui.snapshot(industryEntity)
         planned = planned,
         last = record and record.last or nil,
         previews = preview,
+        -- the booster inputs were built under another "Booster demand per level"
+        boosterOutdated = okOutdated and boosterOutdated == true,
         workers = workers,
         workerBoost = okBoost and tonumber(workerBoost) or nil,
         workersNeeded = workersNeeded,
@@ -467,7 +472,7 @@ function ui.snapshot(industryEntity)
         upkeep = core.upkeep(levels, year),
     }
     local parts = {tostring(constructionId), tostring(s.points), tostring(s.exp),
-        tostring(s.last and s.last.exp), tostring(s.workerBoost), tostring(year), tostring(s.refused)}
+        tostring(s.last and s.last.exp), tostring(s.workerBoost), tostring(year), tostring(s.refused), tostring(s.boosterOutdated)}
     for _index, upgrade in ipairs(core.UPGRADES) do
         parts[#parts + 1] = tostring(pending[upgrade.id]) .. tostring(done[upgrade.id]) .. tostring(planned[upgrade.id])
     end
@@ -1038,6 +1043,14 @@ function ui.upgradeSection(s, id)
                 ui.icon(ui.ICONS.workers, tip),
                 text(ui.numberText(needed.now) .. " → " .. ui.numberText(needed.next), "font-scale-body", tip, true),
             })
+            if not core.ownWorkerScript() and needed.next >= core.ARRIVALS_KEPT then
+                children[#children + 1] = text(ui.tr("The game counts only the last {count} workers arriving by line, so the boost never needs more.",
+                    {count = core.ARRIVALS_KEPT}), "font-scale-annotation")
+            end
+        end
+        if id == "booster" and s.boosterOutdated then
+            children[#children + 1] = text(ui.tr("Built before the booster demand setting changed: the next upgrade of this industry rebuilds it with the current setting."),
+                "font-scale-annotation")
         end
     end
     if s.pending[id] then
@@ -1117,6 +1130,7 @@ function ui.helpPages()
     end
     local upgradesPage = {id = "upgrades", tab = ui.tr("Upgrades"), image = helpImage("upgrades"), blocks = {
         {text = ui.tr("Every industry has up to six upgrades. Only those that change anything at this industry show, each with what its next level does. Built levels stay, also when the industry is rebuilt.")},
+        {hint = ui.tr("A changed mod setting reaches the levels an industry has already built when the industry is rebuilt, at its next upgrade.")},
         {rows = upgrades},
         upkeepHint,
     }}

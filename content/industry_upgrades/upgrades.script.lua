@@ -1,7 +1,8 @@
--- Awards EXP once per game month (EXP_PER_POINT EXP = 1 upgrade point), handles purchases, plans and
+-- Awards EXP once per calendar month (EXP_PER_POINT EXP = 1 upgrade point), handles purchases, plans and
 -- delivery orders from the industry window and rebuilds industries with their new level.
 --
--- State: version, records[constructionId] = {points, exp, targets?, lastPurchase?, last?, plan?, order?,
+-- State: version, lastCheck (game time of the last monthly check), lastMonth (its calendar month, see
+-- calendarMonth), records[constructionId] = {points, exp, targets?, lastPurchase?, last?, plan?, order?,
 -- closed?, ratingReset?, sentAt?, refused?},
 -- queue? = {{construction}} industries waiting for their rebuild. targets: the bought level per
 -- upgrade. A rebuild waits until no purchase came for core.BUNDLE_WAIT, then builds all bought levels
@@ -628,6 +629,19 @@ local function yearOf(now)
     return ok and date and tonumber(date.year) or nil
 end
 
+-- The calendar month of a game time as year * 12 + month, at the current calendar speed. nil while the
+-- calendar stands still (millisPerDay 0 with the game running) or the engine cannot tell.
+local function calendarMonth(time)
+    local okSpeed, millisPerDay = pcall(function()
+        return api.engine.getComponent(api.engine.util.getWorld(), api.type.ComponentType.GAME_SPEED).millisPerDay
+    end)
+    if not okSpeed or (tonumber(millisPerDay) or 0) <= 0 then return nil end
+    local ok, date = pcall(api.engine.util.getCalendarDate, time)
+    local year, month = ok and date and tonumber(date.year), ok and date and tonumber(date.month)
+    if not year or not month then return nil end
+    return year * 12 + month
+end
+
 -- Charges the month's upkeep of all upgraded industries on the player's account, the way the base game
 -- books its marketing campaign: a journal entry, shown in the finances under General, Upkeep Other
 -- (verified with stardorn_upkeep_probe on 2026-10-14). Without a callback: a game script may not pass
@@ -1043,16 +1057,28 @@ function data()
                 return
             end
 
-            if root.lastCheck and root.lastCheck <= now and now - root.lastCheck < month then return end
-            root.lastCheck = now
+            -- Once per calendar month, so EXP and upkeep follow the calendar speed. A state from before
+            -- lastMonth takes the month of its last check. Without a running calendar: once per month
+            -- of game time at the default speed.
+            local thisMonth = calendarMonth(now)
+            if thisMonth and root.lastMonth == nil and root.lastCheck and root.lastCheck <= now then
+                root.lastMonth = calendarMonth(root.lastCheck)
+            end
+            if thisMonth then
+                if root.lastMonth == thisMonth then return end
+            elseif root.lastCheck and root.lastCheck <= now and now - root.lastCheck < month then
+                return
+            end
+            root.lastCheck, root.lastMonth = now, thisMonth
             local queue, stats = monthlyPass(root, now, month)
             -- retries of failed rebuilds; a purchase still waiting for its rebuild is queued already
             local retries = 0
             for _, construction in ipairs(queue) do
                 if enqueue(root, construction) then retries = retries + 1 end
             end
-            local summary = string.format("%smonthly check: %d industries, %d EXP (production %d, shipped %d, best product shipped %d, workers %d, booster %d), %d new points, %d not supported, %d rebuilds queued, upkeep %d",
-                LOG_PREFIX, stats.industries, stats.exp, stats.production, stats.shipped, stats.shippedBest, stats.workers, stats.booster,
+            local calendar = thisMonth and string.format("%d-%02d", math.floor((thisMonth - 1) / 12), (thisMonth - 1) % 12 + 1) or "stands still"
+            local summary = string.format("%smonthly check (calendar %s): %d industries, %d EXP (production %d, shipped %d, best product shipped %d, workers %d, booster %d), %d new points, %d not supported, %d rebuilds queued, upkeep %d",
+                LOG_PREFIX, calendar, stats.industries, stats.exp, stats.production, stats.shipped, stats.shippedBest, stats.workers, stats.booster,
                 stats.points, stats.unsupported, retries, stats.upkeep)
             log.message(summary)
             state:set(root)

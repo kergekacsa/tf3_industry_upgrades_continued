@@ -320,38 +320,28 @@ local function deepCopy(value)
 end
 
 -- Efficiency works on the recipe (see lowerConsumption): every amount x the recipe scale, the rate / the
--- scale, then the inputs x consumption. A larger scale means larger lots: a cycle takes scale x the
--- base game's amounts at once and runs scale times less often.
--- - Steps of 5 or 10 %: every level is a whole 5 %, so every input comes out whole by 20 at the latest.
---   Each recipe and level gets the smallest scale at which it does (steel mill 6 + 6 at -50 %: 3 + 3,
---   scale 1, the base game's lot and rate; refinery 4 at -10 %: 18, scale 5).
--- - Steps of 1 or 2 %: always MAX_RECIPE_SCALE, rounded where a level is no whole 5 %: an input of 4 saves
---   in steps of 1.25 %, one of 1 in steps of 5 %. A fixed scale lets the preview find the base game's
---   amounts again (core.efficiencyRatio); with the smallest one a built 19 at -5 % could come from 1 at
---   20, 4 at 5 or 20 at 1, which round differently at the next level. Exact 1 % would need 100: the
---   machine factory's 700 steel a cycle would not fit its stock of 400.
-core.MAX_RECIPE_SCALE = 20
-
--- Whether every efficiency level is a whole 5 % (steps of 5 or 10 %).
-function core.wholeEfficiencySteps()
-    local twentieths = config.EFFICIENCY_STEP * 20
-    return math.abs(twentieths - math.floor(twentieths + 0.5)) < 1e-9
-end
+-- scale, then the inputs x consumption, rounded to whole units. A larger scale means larger lots: a
+-- cycle takes scale x the base game's amounts at once and runs scale times less often. The scale is
+-- the one up to MAX_RECIPE_SCALE whose rounded inputs come closest to the exact saving (the largest
+-- relative miss of any input counts), the smaller one on a tie: steel mill 6 + 6 at -50 %: 3 + 3,
+-- scale 1; refinery 4 at -10 %: 18, scale 5; saw mill 4 at -4 %: 19, scale 5; saw mill 4 at -1 %: 4,
+-- scale 1, no saving yet.
+core.MAX_RECIPE_SCALE = 5
+-- The recipe scale of each rule with a saving, in the construction's metadata under this prefix and the
+-- rule's index in the industry's rules (persistentMetadata in the engine), for the preview.
+core.RECIPE_SCALE_META = "industryUpgradesRecipeScale"
 
 function core.recipeScale(amounts, consumption)
-    if not core.wholeEfficiencySteps() then return core.MAX_RECIPE_SCALE end
+    local best, bestMiss = 1, math.huge
     for scale = 1, core.MAX_RECIPE_SCALE do
-        local exact = true
+        local miss = 0
         for _index, amount in ipairs(amounts) do
-            local value = amount * scale * consumption
-            if math.abs(value - math.floor(value + 0.5)) > 1e-6 then
-                exact = false
-                break
-            end
+            local exact = amount * consumption
+            miss = math.max(miss, math.abs(core.efficientAmount(amount, consumption, scale) / scale - exact) / amount)
         end
-        if exact then return scale end
+        if miss < bestMiss - 1e-9 then best, bestMiss = scale, miss end
     end
-    return core.MAX_RECIPE_SCALE
+    return best
 end
 
 -- A recipe input of the base game (amount per cycle) at consumption, on the recipe scale.
@@ -433,9 +423,10 @@ end
 -- Efficiency: consumptionFactor cannot save input on its own (see scaleRate), so the saving goes
 -- into the recipe: every amount x core.recipeScale and the rate / the scale (same yearly amounts),
 -- then the inputs x consumption (core.efficientAmount). The recipe tables are replaced, not changed,
--- because the original script hands out the shared configuration.
+-- because the original script hands out the shared configuration. Returns the scale, nil for a rule
+-- without input.
 local function lowerConsumption(rule, consumption)
-    if not hasInput(rule) then return end
+    if not hasInput(rule) then return nil end
     local scale = core.recipeScale(inputAmounts(rule), consumption)
     if scale ~= 1 then
         scaleRate(rule, 1 / scale)
@@ -449,6 +440,7 @@ local function lowerConsumption(rule, consumption)
         for index, amount in ipairs(amounts) do input[set][index] = core.efficientAmount(amount, consumption, scale) end
     end
     rule.input = input
+    return scale
 end
 
 -- Input stocks only booster rules draw from, by position among the input stocks (as rule inputs
@@ -583,13 +575,17 @@ function core.applyUpgrades(result, params)
                 result.metadata[core.WORKPLACES_META] = copy.capacity
                 result.metadata[core.WORKPLACES_BASE_META] = tonumber(persons.capacity)
             end
-            for _rule, rule in ipairs(sub.rules or {}) do
+            for ruleIndex, rule in ipairs(sub.rules or {}) do
                 if rule.booster then
                     if rule.boostFactor and booster ~= 1 then rule.boostFactor = rule.boostFactor * booster end
                     if boosterDemand ~= 1 then raiseBoosterDemand(rule, boosterDemand) end
                 else
                     if throughput ~= 1 then scaleRate(rule, throughput) end
-                    if consumption ~= 1 then lowerConsumption(rule, consumption) end
+                    local scale = consumption ~= 1 and lowerConsumption(rule, consumption)
+                    if scale then
+                        result.metadata = result.metadata or {}
+                        result.metadata[core.RECIPE_SCALE_META .. ruleIndex] = scale
+                    end
                 end
             end
             local inputIndex = 0
@@ -1205,34 +1201,59 @@ function core.throughputPreview(rules, stocks, boost, level, isInputStock, cargo
     return core.preview(rules, stocks, boost, isInputStock, cargoName, {output = ratio, input = ratio})
 end
 
--- The real change of input index (of the first input set) of a rule built at level when it goes to
--- toLevel. With whole 5 % steps every level is exact: the input changes by exactly the nominal share.
--- With 1 or 2 % steps the recipe is always scaled by MAX_RECIPE_SCALE and rounded: the base game's amount
--- is found again by undoing the scale (the rounding moves it by at most 0.1) and both levels rounded
--- from it. An amount that does not fit (built under other settings) gets the nominal change.
-function core.efficiencyRatio(rule, index, level, toLevel)
+-- The base game's inputs ({set -> {index -> amount}}) of a rule built at consumption with the recipe
+-- scale knownScale (core.RECIPE_SCALE_META), found by undoing it. Without it (built before the scale was
+-- recorded) each scale from MAX_RECIPE_SCALE down is tried: the first that rebuilds the same inputs and
+-- that core.recipeScale chooses for them. Several originals can fit then (19 at -5 %: 4 at scale 5 or 20
+-- at scale 1); the smallest is taken, as the base game's recipes are small. nil when none fits (built
+-- under other settings). Without a saving the rule keeps the base game's inputs.
+local function originalInputs(rule, consumption, knownScale)
+    if consumption == 1 then return rule.input or {} end
+    for scale = knownScale or core.MAX_RECIPE_SCALE, knownScale or 1, -1 do
+        local original, fits = {}, true
+        for set, inputs in ipairs(rule.input or {}) do
+            original[set] = {}
+            for index, amount in ipairs(inputs) do
+                local value = amount > 0 and math.floor(amount / (scale * consumption) + 0.5) or 0
+                if amount > 0 and (value < 1 or core.efficientAmount(value, consumption, scale) ~= amount) then fits = false end
+                original[set][index] = value
+            end
+        end
+        if fits and core.recipeScale(inputAmounts({input = original}), consumption) == scale then return original end
+    end
+    return nil
+end
+
+-- The real change of input index (of the first input set) of a rule built at level with the recipe
+-- scale scale (nil: unknown) when it goes to toLevel: both levels rounded like the rebuild, from the base
+-- game's inputs (originalInputs). An amount that does not fit (built under other settings) gets the
+-- nominal change.
+function core.efficiencyRatio(rule, index, level, toLevel, scale)
     local nominal = core.effect("efficiency", toLevel) / core.effect("efficiency", level)
     local amount = rule.input and rule.input[1] and rule.input[1][index] or 0
-    if core.wholeEfficiencySteps() or amount <= 0 then return nominal end
-    local scale = core.MAX_RECIPE_SCALE
-    local function perCycle(original, at) -- per cycle of the base game's recipe
-        if at <= 0 then return original end
-        return core.efficientAmount(original, core.effect("efficiency", at), scale) / scale
+    if amount <= 0 then return nominal end
+    local original = originalInputs(rule, core.effect("efficiency", level), scale)
+    if not original then return nominal end
+    local amounts = inputAmounts({input = original})
+    local function perCycle(at) -- per cycle of the base game's recipe
+        local consumption = core.effect("efficiency", at)
+        if consumption == 1 then return original[1][index] end
+        local scale = core.recipeScale(amounts, consumption)
+        return core.efficientAmount(original[1][index], consumption, scale) / scale
     end
-    local original = amount
-    if level > 0 then
-        local consumption = core.effect("efficiency", level)
-        original = math.floor(amount / (scale * consumption) + 0.5)
-        if original < 1 or core.efficientAmount(original, consumption, scale) ~= amount then return nominal end
-    end
-    return perCycle(original, toLevel) / perCycle(original, level)
+    return perCycle(toLevel) / perCycle(level)
 end
 
 -- Preview of an efficiency level: only the inputs shrink, each by its real change, so each recipe
--- shows its inputs.
-function core.efficiencyPreview(rules, stocks, boost, level, isInputStock, cargoName, toLevel)
+-- shows its inputs. metadata: the construction's persistentMetadata with the recipe scales (nil: unknown).
+function core.efficiencyPreview(rules, stocks, boost, level, isInputStock, cargoName, toLevel, metadata)
     toLevel = toLevel or level + 1
-    local function ratio(rule, index) return core.efficiencyRatio(rule, index, level, toLevel) end
+    local ruleIndex = {}
+    for index, rule in ipairs(rules or {}) do ruleIndex[rule] = index end
+    local function ratio(rule, index)
+        local scale = metadata and ruleIndex[rule] and tonumber(metadata[core.RECIPE_SCALE_META .. ruleIndex[rule]])
+        return core.efficiencyRatio(rule, index, level, toLevel, scale)
+    end
     local rows = {}
     for _index, row in ipairs(core.preview(rules, stocks, boost, isInputStock, cargoName, {output = 1, input = ratio})) do
         if #row.inputs > 0 then rows[#rows + 1] = {inputs = row.inputs, outputs = {}} end
@@ -1244,11 +1265,35 @@ end
 -- raiseBoosterDemand: the base game's amount is found again from the built one (13 at x1.1 -> 12), so the
 -- preview shows what the rebuild will make (12 x 1.2 = 14.4 -> 14, not 13 x 1.2 / 1.1). An amount that
 -- does not fit (built under other settings) gets the plain share.
+local function boosterOriginal(amount, factor)
+    local original = math.floor(amount / factor + 0.5)
+    if original < 1 or math.max(1, math.floor(original * factor + 0.5)) ~= amount then return nil end
+    return original
+end
+
 function core.boosterAmount(amount, level, toLevel)
     local from, to = core.boosterDemand(level), core.boosterDemand(toLevel)
-    local original = math.floor(amount / from + 0.5)
-    if original < 1 or math.max(1, math.floor(original * from + 0.5)) ~= amount then return amount * to / from end
+    local original = boosterOriginal(amount, from)
+    if not original then return amount * to / from end
     return math.max(1, math.floor(original * to + 0.5))
+end
+
+-- Whether a booster input of the industry's own boosters does not fit the booster demand at level, so it
+-- was built under another "Booster demand per level" and keeps it until the next rebuild. An amount that
+-- fits by chance (7 at x1.75, from 4) goes unnoticed, and so does a demand switched off since.
+function core.boosterOutdated(rules, level)
+    local factor = core.boosterDemand(level)
+    if factor == 1 then return false end
+    for _index, rule in ipairs(rules or {}) do
+        if core.isRealBooster(rule) then
+            for _set, inputs in ipairs(rule.input or {}) do
+                for _input, amount in ipairs(inputs) do
+                    if amount > 0 and not boosterOriginal(amount, factor) then return true end
+                end
+            end
+        end
+    end
+    return false
 end
 
 -- Preview of a booster strength level while the booster demand rises with it: the yearly cargo of each

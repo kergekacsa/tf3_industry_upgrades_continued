@@ -94,7 +94,7 @@
         {
             "key": "efficiencyStep",
             "name": "Efficiency per level",
-            "tooltip": "Less input per efficiency level. Steps below 10% are rounded to the recipe.",
+            "tooltip": "Less input per efficiency level. A production cycle uses at most 5 times the game's amounts, so the saving of a level is rounded to whole units.",
             "uiType": "Button",
             "values": [
                 "-1%",
@@ -185,7 +185,7 @@
         {
             "key": "workersNeeded",
             "name": "Workers needed per level",
-            "tooltip": "Every worker boost level also adds this share of workplaces, so the boost needs more workers arriving by line. Off: the workplaces stay the same.",
+            "tooltip": "Every worker boost level also adds this share of workplaces, so the boost needs more workers arriving by line. Off: the workplaces stay the same. The workplaces stop at 40, because the game counts only the last 20 workers arriving by line.",
             "uiType": "Button",
             "values": [
                 "Off",
