@@ -67,6 +67,8 @@ core.EVENT_CANCEL = "industryUpgradesCancel"
 core.EVENT_PLAN = "industryUpgradesPlan"
 core.EVENT_START = "industryUpgradesStart"
 core.EVENT_DISCARD = "industryUpgradesDiscard"
+-- {construction}: drops the bought levels of a refused rebuild and returns their points.
+core.EVENT_REFUND = "industryUpgradesRefund"
 -- The base game's event for cargo an industry is about to consume (see landmarks.script.tl).
 core.CONSUMED_SOURCE = "StockListSystem"
 core.CONSUMED_EVENT = "ItemsAboutToBeConsumed"
@@ -179,6 +181,11 @@ core.STATE_VERSION = 4
 -- after another end up in one rebuild. Rebuilding an oil platform freezes the game for a while.
 core.BUNDLE_WAIT = 5000
 
+-- Game time (ms) after sending a rebuild before the game script checks whether the levels were built.
+-- A game script gets no result of its commands, so levels still missing after this wait mean that the
+-- game refused the rebuild.
+core.REBUILD_CHECK_WAIT = 2000
+
 local function clamp(level, max)
     level = math.floor(tonumber(level) or 0)
     return math.max(0, math.min(max, level))
@@ -251,6 +258,16 @@ function core.throughputFactor(level) return core.effect("throughput", level) en
 
 function core.cost(nextLevel)
     return config.COST_BASE + config.COST_STEP * (nextLevel - 1)
+end
+
+-- The points that bought the pending levels (core.pendingTargets): every level above the built one,
+-- at the current cost settings.
+function core.refundPoints(pending, params)
+    local points = 0
+    for id, target in pairs(pending or {}) do
+        for level = core.level(params, id) + 1, target do points = points + core.cost(level) end
+    end
+    return points
 end
 
 -- Upkeep ------------------------------------------------------------------------------------------

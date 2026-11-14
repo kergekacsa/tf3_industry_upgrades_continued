@@ -15,6 +15,10 @@ end
 
 local function body(s)
     local children = {}
+    if s.refused then
+        children[#children + 1] = heading(ui.tr("Rebuild refused"))
+        for _node, node in ipairs(ui.refusedSection(s)) do children[#children + 1] = node end
+    end
     -- points when upgrades cost points, the plan when they cost deliveries; the open
     -- order in both (one opened before a switch to EXP points runs on and can be cancelled)
     if ui.anyPointUpgrades() then children[#children + 1] = ui.pointsSummary(s) end

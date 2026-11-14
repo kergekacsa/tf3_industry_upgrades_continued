@@ -443,6 +443,9 @@ function ui.snapshot(industryEntity)
         points = record and record.points or nil,
         exp = record and record.exp or 0,
         pending = pending,
+        -- the game refused the last rebuild for the pending levels, and the points they cost
+        refused = record ~= nil and record.refused == true and next(pending) ~= nil,
+        refund = core.refundPoints(pending, params),
         done = done,
         planned = planned,
         last = record and record.last or nil,
@@ -464,7 +467,7 @@ function ui.snapshot(industryEntity)
         upkeep = core.upkeep(levels, year),
     }
     local parts = {tostring(constructionId), tostring(s.points), tostring(s.exp),
-        tostring(s.last and s.last.exp), tostring(s.workerBoost), tostring(year)}
+        tostring(s.last and s.last.exp), tostring(s.workerBoost), tostring(year), tostring(s.refused)}
     for _index, upgrade in ipairs(core.UPGRADES) do
         parts[#parts + 1] = tostring(pending[upgrade.id]) .. tostring(done[upgrade.id]) .. tostring(planned[upgrade.id])
     end
@@ -727,6 +730,10 @@ function ui.buy(s, id)
         {construction = s.constructionId, upgrade = id}))
 end
 
+function ui.refund(s)
+    api.cmd.sendCommand(api.cmd.makeScriptingSendEventCmd("", core.EVENT_ID, core.EVENT_REFUND, {construction = s.constructionId}))
+end
+
 function ui.cancelDelivery(s)
     api.cmd.sendCommand(api.cmd.makeScriptingSendEventCmd("", core.EVENT_ID, core.EVENT_CANCEL, {construction = s.constructionId}))
 end
@@ -764,6 +771,21 @@ end
 
 local function horizontal(children)
     return builtin.Component{layout = builtin.BoxLayout{orientation = builtin.type.Orientation.Horizontal, children = children}}
+end
+
+-- Why the bought levels wait, what the player can do, and, while upgrades cost points, the button that
+-- returns them. Only while s.refused.
+function ui.refusedSection(s)
+    local children = {text(ui.tr("The game refused to rebuild this industry, so the bought levels cannot be built. The usual cause is the industry's access road where it meets roads built or changed later. Disconnect those roads at the entrance: the mod tries again at the next monthly check. Then connect them again."),
+        "font-scale-body")}
+    if not core.deliveryMode() and s.refund > 0 then
+        children[#children + 1] = builtin.Button{
+            meta = {forceFocusable = true, tooltip = ui.tr("Cancels the levels that wait for the rebuild and returns their points.")},
+            content = horizontal({ui.icon(ui.ICONS.points), text(ui.tr("Refund {points} points", {points = s.refund}), "font-scale-body")}),
+            onClick = function() ui.refund(s) end,
+        }
+    end
+    return children
 end
 
 -- The base game's buy button style: "⬆ Level 2 ........ 1 ★". It stays available while bought levels
@@ -1019,8 +1041,8 @@ function ui.upgradeSection(s, id)
         end
     end
     if s.pending[id] then
-        children[#children + 1] = text(ui.tr("Upgrading to level {level} in a few seconds (not while paused)", {level = s.pending[id]}),
-            "font-scale-body")
+        children[#children + 1] = text(ui.tr(s.refused and "Level {level} waits: the game refused to rebuild the industry"
+            or "Upgrading to level {level} in a few seconds (not while paused)", {level = s.pending[id]}), "font-scale-body")
     end
     if s.order and s.order.targets[id] then
         children[#children + 1] = text(ui.tr("In progress: level {level}", {level = s.order.targets[id]}), "font-scale-body")
@@ -1123,6 +1145,7 @@ function ui.helpPages()
             {exp = config.EXP_PER_POINT})},
         {rows = conditions},
         {text = ui.tr("Spend points on the upgrade cards. Levels bought one after another are built together a few seconds later.")},
+        {hint = ui.tr("If the game refuses to rebuild an industry, its upgrades say so and can return the points of the waiting levels.")},
     }}
 
     -- deliveries

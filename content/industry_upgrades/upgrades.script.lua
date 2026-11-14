@@ -2,10 +2,12 @@
 -- delivery orders from the industry window and rebuilds industries with their new level.
 --
 -- State: version, records[constructionId] = {points, exp, targets?, lastPurchase?, last?, plan?, order?,
--- closed?, ratingReset?},
+-- closed?, ratingReset?, sentAt?, refused?},
 -- queue? = {{construction}} industries waiting for their rebuild. targets: the bought level per
 -- upgrade. A rebuild waits until no purchase came for core.BUNDLE_WAIT, then builds all bought levels
--- at once. The levels live in the construction parameters, so they survive rebuilds even if the
+-- at once. sentAt: game time of the last rebuild sent for bought levels; once core.REBUILD_CHECK_WAIT
+-- has passed, refused = true when the levels are still missing (checkRebuilds), so the window can say
+-- so and offer the refund. The levels live in the construction parameters, so they survive rebuilds even if the
 -- construction entity changes; the remaining points and EXP are carried over through the parameters
 -- as well.
 --
@@ -200,6 +202,7 @@ end
 -- above the built levels (and the order apart from the built one), so the next monthly check queues
 -- it again. force: rebuild even if nothing seems to be missing (an order fitted to a lower maximum).
 -- Workplaces that differ from what "Workers needed per level" builds now are rebuilt as well.
+-- Returns true when the command was sent for bought levels.
 local function rebuild(job, record, now, force)
     if not api.engine.entityExists(job.construction) then return end -- bulldozed since the purchase
     local construction = api.engine.getComponent(job.construction, api.type.ComponentType.CONSTRUCTION)
@@ -220,6 +223,7 @@ local function rebuild(job, record, now, force)
     end
     -- ignoreErrors = false: a rebuild that would collide with anything is skipped, never forced.
     api.cmd.sendCommand(api.cmd.makeWorldBuildProposalCmd(proposal, nil, false, false, false))
+    return pending ~= nil
 end
 
 local function newRecord(params, now, month)
@@ -263,6 +267,39 @@ local function enqueue(root, construction)
     end
     root.queue[#root.queue + 1] = {construction = construction}
     return true
+end
+
+local function dequeue(root, construction)
+    for index = #(root.queue or {}), 1, -1 do
+        if root.queue[index].construction == construction then table.remove(root.queue, index) end
+    end
+    if root.queue and #root.queue == 0 then root.queue = nil end
+end
+
+-- Rebuilds sent at least core.REBUILD_CHECK_WAIT ago: refused while the construction still exists
+-- with levels missing. A rebuild that worked may have given the industry a new construction entity;
+-- the monthly check then drops the old record. True when anything changed.
+local function checkRebuilds(root, now)
+    local changed = false
+    for key, record in pairs(root.records) do
+        local sentAt = tonumber(record.sentAt)
+        if sentAt and (now < sentAt or now - sentAt >= core.REBUILD_CHECK_WAIT) then
+            record.sentAt = nil
+            local id = tonumber(key)
+            local construction = id and api.engine.entityExists(id) and api.engine.getComponent(id, api.type.ComponentType.CONSTRUCTION)
+            local pending = construction and core.pendingTargets(record, copyParams(construction))
+            if pending and not record.refused then
+                local parts = {}
+                for upgradeId, level in pairs(pending) do parts[#parts + 1] = upgradeId .. " " .. level end
+                table.sort(parts)
+                log.warning(LOG_PREFIX .. "construction " .. key .. ": the game refused the rebuild, levels still missing: "
+                    .. table.concat(parts, ", ") .. ". The next monthly check tries again.")
+            end
+            record.refused = pending and true or nil
+            changed = true
+        end
+    end
+    return changed
 end
 
 -- The saved state, converted to the current version (purchases may arrive before the first update).
@@ -734,7 +771,21 @@ local function buy(state, param)
     record.targets[upgrade.id] = nextLevel
     log.message(LOG_PREFIX .. "construction " .. target.key .. " bought " .. upgrade.id .. " level " .. nextLevel .. " for " .. cost .. " points")
     record.lastPurchase = target.now
+    record.sentAt = nil -- a rebuild sent before this purchase cannot have built it
     enqueue(target.root, target.id)
+    state:set(target.root)
+end
+
+-- Drops the bought levels of a refused rebuild and returns their points (core.refundPoints).
+local function refund(state, param)
+    local target = eventTarget(state, param)
+    if not target or core.deliveryMode() or not target.record.refused then return end
+    local record = target.record
+    local points = core.refundPoints(record.targets, target.params)
+    record.points = record.points + points
+    record.targets, record.refused, record.sentAt, record.lastPurchase = nil, nil, nil, nil
+    dequeue(target.root, target.id)
+    log.message(LOG_PREFIX .. "construction " .. target.key .. " refunded " .. points .. " points of the levels the game refused to build")
     state:set(target.root)
 end
 
@@ -951,6 +1002,7 @@ function data()
             state:subscribeToEvent(core.EVENT_PLAN)
             state:subscribeToEvent(core.EVENT_START)
             state:subscribeToEvent(core.EVENT_DISCARD)
+            state:subscribeToEvent(core.EVENT_REFUND)
             state:subscribeToEvent(core.CONSUMED_EVENT)
             if not dt or dt <= 0 then return end
             local gameTime = api.engine.getComponent(api.engine.util.getWorld(), api.type.ComponentType.GAME_TIME)
@@ -967,6 +1019,7 @@ function data()
             -- complete orders become targets; log the orders whose stocks were just built
             if completeOrders(root, now, 12 * month) then changed = true end
             if checkOrders(root, now) then changed = true end
+            if checkRebuilds(root, now) then changed = true end
             if changed then state:set(root) end
 
             local index, job = nextRebuild(root, now)
@@ -978,10 +1031,14 @@ function data()
                 if refit then record.order.refit = nil end
                 -- Progress is stored before asking the engine, so an error can never repeat the same rebuild.
                 state:set(root)
-                local ok, err = pcall(rebuild, job, record, now, refit)
+                local ok, result = pcall(rebuild, job, record, now, refit)
                 if not ok and not errorLogged then
                     errorLogged = true
-                    log.error(LOG_PREFIX .. "rebuilding construction " .. tostring(job.construction) .. " failed: " .. tostring(err))
+                    log.error(LOG_PREFIX .. "rebuilding construction " .. tostring(job.construction) .. " failed: " .. tostring(result))
+                end
+                if ok and result and record then
+                    record.sentAt = now
+                    state:set(root)
                 end
                 return
             end
@@ -1017,6 +1074,8 @@ function data()
                 discard(state, param)
             elseif name == core.EVENT_CANCEL then
                 cancel(state, param)
+            elseif name == core.EVENT_REFUND then
+                refund(state, param)
             end
         end,
     }

@@ -56,6 +56,7 @@ local UpgradesTab = react.RegisterRecipe("IndustryUpgradesTab", function(param)
         -- points when upgrades cost points, the plan when they cost deliveries. The open
         -- order shows in both: one opened before a switch to EXP points runs on and can be cancelled.
         widgets = {}
+        if s.refused then widgets[#widgets + 1] = card("industryUpgradesRefused", ui.tr("Rebuild refused"), ui.refusedSection(s), param) end
         if ui.anyPointUpgrades() then widgets[#widgets + 1] = pointsCard(s, param) end
         if s.order then widgets[#widgets + 1] = card("industryUpgradesOrder", ui.orderTitle(s), ui.orderSection(s), param) end
         if not ui.anyPointUpgrades() then widgets[#widgets + 1] = planCard(s, param) end
