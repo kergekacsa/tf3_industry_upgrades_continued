@@ -3,8 +3,8 @@
 -- (ui.CancelDelivery); the windows' recipes are registered by those script files.
 -- Icons and styles come from the base game (booster card ticks, "primary, costs" buy button);
 -- explanations live in tooltips to keep the window short.
-local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
-local config = require "stardorn_industry_upgrades::/industry_upgrades/config.lua"
+local core = require "kacsa_industry_upgrades_continued::/industry_upgrades/core.lua"
+local config = require "kacsa_industry_upgrades_continued::/industry_upgrades/config.lua"
 local react = ug_require "::/gui/main/react.lua"
 local builtin = ug_require "::/gui/main/builtin.lua"
 local guiReactUtil = ug_require "::/gui/main/gui_react_util.tl"

@@ -1,17 +1,17 @@
 -- Pure functions shared by the load-time modifier, the construction script, the game script and the GUI.
-local config = require "stardorn_industry_upgrades::/industry_upgrades/config.lua"
+local config = require "kacsa_industry_upgrades_continued::/industry_upgrades/config.lua"
 
 local core = {}
 
-core.MOD_ID = "stardorn_industry_upgrades"
+core.MOD_ID = "kacsa_industry_upgrades_continued"
 core.KEY = "industryUpgrades"                         -- our entry in updateScript.params
-core.UPDATE = "stardorn_industry_upgrades::/industry_upgrades/construction.script@update"
-core.GAME_SCRIPT = "stardorn_industry_upgrades::/industry_upgrades/upgrades.gs"
-core.WINDOW_SCRIPT = "stardorn_industry_upgrades::/industry_upgrades/window.script@entityWindowFn"
+core.UPDATE = "kacsa_industry_upgrades_continued::/industry_upgrades/construction.script@update"
+core.GAME_SCRIPT = "kacsa_industry_upgrades_continued::/industry_upgrades/upgrades.gs"
+core.WINDOW_SCRIPT = "kacsa_industry_upgrades_continued::/industry_upgrades/window.script@entityWindowFn"
 -- The base game's worker boost script, and our copy that can run instead (core.ownWorkerScript,
 -- workers.script.lua).
 core.BASE_WORKERS_GAME_SCRIPT = "industries/industry_workers.gs"
-core.WORKERS_SCRIPT = "stardorn_industry_upgrades::/industry_upgrades/workers.script"
+core.WORKERS_SCRIPT = "kacsa_industry_upgrades_continued::/industry_upgrades/workers.script"
 -- The workplaces an industry was last built with and its own before the upgrade, in its construction's
 -- metadata (persistentMetadata in the engine, like the base game's workersBoostFactor).
 core.WORKPLACES_META = "industryUpgradesWorkplaces"
@@ -103,7 +103,7 @@ for _index, upgrade in ipairs(core.UPGRADES) do
     upgrade.orderParam = "industryUpgradesOrder" .. upgrade.id:sub(1, 1):upper() .. upgrade.id:sub(2)
 end
 
-core.SETTINGS = require "stardorn_industry_upgrades::/industry_upgrades/settings.lua"
+core.SETTINGS = require "kacsa_industry_upgrades_continued::/industry_upgrades/settings.lua"
 local DEFAULTS = {}
 for key, value in pairs(config) do DEFAULTS[key] = value end
 

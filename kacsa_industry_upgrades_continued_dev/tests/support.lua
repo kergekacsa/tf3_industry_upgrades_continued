@@ -1,5 +1,6 @@
 -- A stub of the game for the tests: module loading, the log, and the parts of the game api that the
--- game script and core.lua use. Run every test from the mod folder.
+-- game script and core.lua use. Run every test from the dev folder; the mod is its sibling folder
+-- (support.CONTENT).
 --
 -- The calendar: a day lasts game.millisPerDay ms of game time, a month 30 days, a year 12 months.
 -- DEFAULT_MILLIS_PER_DAY is the default calendar speed, so api.util.getDefaultYearDuration() is a year
@@ -7,10 +8,11 @@
 
 local support = {}
 
-local MOD_PREFIX = "stardorn_industry_upgrades::/"
+support.CONTENT = "../kacsa_industry_upgrades_continued/content/"
+local MOD_PREFIX = "kacsa_industry_upgrades_continued::/"
 local modules = {}
 require = function(name)
-    local file = "content/" .. name:sub(#MOD_PREFIX + 1)
+    local file = support.CONTENT .. name:sub(#MOD_PREFIX + 1)
     modules[file] = modules[file] or dofile(file)
     return modules[file]
 end
@@ -92,7 +94,7 @@ api = {
     res = {constructionRep = {
         find = function() return 1 end,
         get = function()
-            return {updateScript = {params = {industryUpgrades = {mod = "stardorn_industry_upgrades", settings = game.settings}}}}
+            return {updateScript = {params = {industryUpgrades = {mod = "kacsa_industry_upgrades_continued", settings = game.settings}}}}
         end,
     }},
     cmd = {
@@ -110,7 +112,7 @@ support.core = require(MOD_PREFIX .. "industry_upgrades/core.lua")
 
 -- A fresh game script with an empty saved state, as after loading a savegame.
 function support.loadScript(saved)
-    dofile("content/industry_upgrades/upgrades.script.lua")
+    dofile(support.CONTENT .. "industry_upgrades/upgrades.script.lua")
     local script = data()
     local stateHolder = {saved = saved}
     local state = {

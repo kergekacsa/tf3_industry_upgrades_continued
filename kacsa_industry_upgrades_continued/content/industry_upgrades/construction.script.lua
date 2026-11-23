@@ -1,5 +1,5 @@
 local util = ug_require "::/scripts/util.tl"
-local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
+local core = require "kacsa_industry_upgrades_continued::/industry_upgrades/core.lua"
 
 function data()
     return {

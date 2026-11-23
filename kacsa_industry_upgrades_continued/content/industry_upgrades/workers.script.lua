@@ -7,7 +7,7 @@
 -- its workers, not only once all of them arrive (updateIndustryProductivity). The game script entity, its state and its event stay
 -- the base game's, so industry_productivity_util, the industry window and savegames read the arrivals
 -- as before; without the redirect the base game cuts them to 20 again.
-local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
+local core = require "kacsa_industry_upgrades_continued::/industry_upgrades/core.lua"
 local entity_util = ug_require "::/scripts/entity_util.tl"
 local productivity = ug_require "::/industries/industry_productivity_util.tl"
 

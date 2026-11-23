@@ -31,7 +31,7 @@
 --   production card, and ticks only at the full boost. The base game's row shows the full boost and
 --   ticks at any boost above x1.
 -- Anything unexpected leaves the window as it is.
-local core = require "stardorn_industry_upgrades::/industry_upgrades/core.lua"
+local core = require "kacsa_industry_upgrades_continued::/industry_upgrades/core.lua"
 local react = ug_require "::/gui/main/react.lua"
 local builtin = ug_require "::/gui/main/builtin.lua"
 local industryUtil = ug_require "::/gui/main/industry_util.tl"

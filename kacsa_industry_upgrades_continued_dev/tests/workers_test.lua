@@ -79,7 +79,7 @@ local function kept(workerLevel, arrivals)
     game.settings = {WORKERS_NEEDED = 1}
     game.constructions[game.MILL] = {fileName = "industry/saw_mill.con", params = {[WORKERS_PARAM] = workerLevel + 1}}
     sentProductivity = nil
-    dofile("content/industry_upgrades/workers.script.lua")
+    dofile(support.CONTENT .. "industry_upgrades/workers.script.lua")
     local script = data()
     local history = {}
     for index = 1, arrivals - 1 do history[index] = {time = arrivals - index, entity = {id = 1000 + index}} end
@@ -107,7 +107,7 @@ local function loadModifiers(choice)
     local modifiers = {}
     addModifier = function(name, fn) modifiers[name] = fn end
     _ = function(text) return text end
-    dofile("content/mod.script.lua")
+    dofile(support.CONTENT .. "mod.script.lua")
     data().runFn(nil, nil, {[core.MOD_ID] = {workersNeeded = choice}})
     return modifiers
 end

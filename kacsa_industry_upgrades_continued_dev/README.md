@@ -1,6 +1,23 @@
-# Industry Upgrades (private fork)
+# Industry Upgrades Continued
 
-A private fork of the Transport Fever 3 mod [Industry Upgrades](https://mod.io/g/transportfever3/m/industry-upgrades). The fork is for personal use and is not published.
+A fork of the Transport Fever 3 mod [Industry Upgrades](https://mod.io/g/transportfever3/m/industry-upgrades), published on mod.io as Industry Upgrades Continued.
+
+## Folders
+
+The repository follows the layout of the other mods in `staging_area`: its `.git` sits in the dev folder, with `core.worktree = ../..`, and `.git/info/exclude` lets in only these two folders.
+
+```text
+staging_area/
+├── kacsa_industry_upgrades_continued/       the mod as it is uploaded
+│   ├── _metadata/                           cover (0.png) and mod page (modinfo.json)
+│   ├── content/
+│   ├── mod.json
+│   └── strings.json
+└── kacsa_industry_upgrades_continued_dev/   documents and tests, never uploaded
+    ├── CONTEXT.md
+    ├── README.md
+    └── tests/
+```
 
 ## Start point
 
@@ -8,10 +25,9 @@ The first commit of this repository is the original, revision 8 (mod.io item 642
 
 ## Differences from the original
 
-The fork keeps the mod ID `stardorn_industry_upgrades`, and its folder in the staging area has the same name.
-
 | Area | Original | Fork |
 |---|---|---|
+| Mod ID and folder | `stardorn_industry_upgrades`, revision 8 | `kacsa_industry_upgrades_continued`, revision 1 |
 | Refused rebuild | The bought levels show "Upgrading to level X in a few seconds" for ever, and every later purchase at the industry waits in the same rebuild | The game script notices that the levels are still missing after the rebuild, logs a warning once, and keeps the retry every month. The Upgrades tab (or the card) shows a Rebuild refused section with the usual cause and what to do |
 | Refund | None | While a rebuild is refused and upgrades cost points, a button drops the waiting levels and returns their points at the current cost settings |
 | Monthly check (EXP, upkeep) | Once per month of game time at the default calendar speed, so at 1/8 calendar speed it runs 8 times per calendar month | Once per calendar month, at every calendar speed. With a calendar that stands still, once per month of game time as before |
@@ -32,7 +48,7 @@ Disconnecting the roads at the entrance lets the next monthly retry build the le
 
 ## Tests
 
-Run each test from the mod folder with `lua55 tests/<name>.lua`. `tests/support.lua` is the stub of the game they share.
+Run each test from the dev folder with `lua55 tests/<name>.lua`. `tests/support.lua` is the stub of the game they share, and it loads the mod from the sibling folder (`support.CONTENT`).
 
 | Test | What it checks |
 |---|---|
@@ -44,6 +60,10 @@ Run each test from the mod folder with `lua55 tests/<name>.lua`. `tests/support.
 
 ## Use
 
-The game finds the fork in the staging area. The mod.io copy of the original MUST NOT be installed at the same time, because both have the same mod ID.
+The fork and the original wrap the same industries, so they MUST NOT be active in the same game.
 
-A savegame made with the original keeps its upgrade state with the fork. The game script, the mod settings, and the construction parameters all belong to the mod ID, and the ID is the same.
+The saved upgrade state belongs to the game script of the mod ID, and the mod settings belong to the mod ID too. A savegame that switches from the original to the fork keeps the built levels, because they are construction parameters with the same names. It loses the points, the EXP, the bought levels that wait for their rebuild, the open delivery orders, and the chosen settings.
+
+## Publishing
+
+The steps and checks are in `staging_area/PUBLISHING.md`. The mod page text comes from `_metadata/modinfo.json`, and the cover is the original's cover with CONTINUED in its top-right badge.

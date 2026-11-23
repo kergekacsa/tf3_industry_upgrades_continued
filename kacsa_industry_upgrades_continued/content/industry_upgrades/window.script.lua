@@ -1,7 +1,7 @@
 -- Industry window with an own "Upgrades" tab next to "Industry" (and the station tabs), built the
 -- same way as the base game's pollution cleanup facility: an entityWindowScript that returns the
 -- ConstructionWindow with a custom tab. The other tabs come from the subconstructions as usual.
-local ui = require "stardorn_industry_upgrades::/industry_upgrades/ui.lua"
+local ui = require "kacsa_industry_upgrades_continued::/industry_upgrades/ui.lua"
 local react = ug_require "::/gui/main/react.lua"
 local builtin = ug_require "::/gui/main/builtin.lua"
 local engineReact = ug_require "::/gui/main/engine_react_util.tl"
